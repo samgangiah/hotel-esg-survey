@@ -1,0 +1,1120 @@
+{
+  "meta": {
+    "title": "Hotel Energy & ESG Survey",
+    "subtitle": "A short diagnostic to identify energy waste and improvement opportunities",
+    "version": "0.2",
+    "scope": "Pilot — General, Guest Rooms and Laundry. Based on Penny Court's draft (v1) with typo fixes, normalised options, explicit conditional logic, repeater patterns for per-machine data, and additional questions flagged with \"added\": true.",
+    "estimatedMinutes": 20,
+    "submitButtonLabel": "Review my answers",
+    "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll come back to you within five working days with an opportunity report."
+  },
+  "sections": [
+    {
+      "id": "general",
+      "title": "About the property",
+      "intro": "Some quick context to set the baseline. The energy bills are the most useful single piece of information you can give us — please attach them if you have them to hand.",
+      "groups": [
+        {
+          "id": "general_main",
+          "title": null,
+          "questions": [
+            {
+              "id": "general_respondent_name",
+              "type": "text",
+              "label": "Your name",
+              "required": true
+            },
+            {
+              "id": "general_respondent_role",
+              "type": "text",
+              "label": "Your role at the property",
+              "help": "e.g. General Manager, Operations Director, Head of Maintenance",
+              "required": true
+            },
+            {
+              "id": "general_property_name",
+              "type": "text",
+              "label": "Property name",
+              "required": true
+            },
+            {
+              "id": "general_room_count",
+              "type": "number",
+              "label": "Number of guest rooms",
+              "added": true,
+              "required": true
+            },
+            {
+              "id": "general_floors",
+              "type": "number",
+              "label": "Number of floors",
+              "added": true
+            },
+            {
+              "id": "general_property_age",
+              "type": "single",
+              "label": "Approximate construction era of the main building",
+              "added": true,
+              "options": [
+                { "value": "pre_1900", "label": "Pre-1900" },
+                { "value": "1900_1945", "label": "1900–1945" },
+                { "value": "1946_1980", "label": "1946–1980" },
+                { "value": "1981_2000", "label": "1981–2000" },
+                { "value": "post_2000", "label": "Post-2000" }
+              ]
+            },
+            {
+              "id": "general_occupancy_rate_12m",
+              "type": "number",
+              "label": "Average hotel occupancy rate over the last 12 months",
+              "unit": "%"
+            },
+            {
+              "id": "general_energy_bills",
+              "type": "file",
+              "label": "Latest energy bills",
+              "help": "Ideally the last 12 months of bills (electricity and gas). Multiple files welcome.",
+              "multiple": true
+            },
+            {
+              "id": "general_monthly_consumption",
+              "type": "longtext",
+              "label": "Total energy consumption by month over the last 12 months",
+              "help": "If you can share the kWh figures for each month rather than just the bills, please paste them here. Otherwise leave blank — we'll work from the bills."
+            },
+            {
+              "id": "general_primary_heating",
+              "type": "single",
+              "label": "Primary heating fuel",
+              "added": true,
+              "options": [
+                { "value": "gas", "label": "Mains gas boiler" },
+                { "value": "oil", "label": "Oil" },
+                { "value": "lpg", "label": "LPG" },
+                { "value": "electric", "label": "Electric (direct or storage)" },
+                { "value": "heat_pump", "label": "Heat pump (air or ground source)" },
+                { "value": "district", "label": "District heating" },
+                { "value": "chp", "label": "Combined Heat & Power (CHP)" },
+                { "value": "mixed", "label": "Mixed — please describe" }
+              ]
+            },
+            {
+              "id": "general_primary_heating_describe",
+              "type": "longtext",
+              "label": "Please describe your heating mix",
+              "added": true,
+              "showWhen": [
+                { "questionId": "general_primary_heating", "operator": "equals", "value": "mixed" }
+              ]
+            },
+            {
+              "id": "general_chp",
+              "type": "yesno",
+              "label": "Do you have a CHP (Combined Heat and Power) unit?",
+              "added": true
+            },
+            {
+              "id": "general_renewables",
+              "type": "multi",
+              "label": "Any on-site renewable or low-carbon energy generation?",
+              "added": true,
+              "options": [
+                { "value": "solar_pv", "label": "Solar PV (electricity)" },
+                { "value": "solar_thermal", "label": "Solar thermal (hot water)" },
+                { "value": "heat_pump", "label": "Heat pump" },
+                { "value": "battery", "label": "Battery storage" },
+                { "value": "ev_charging", "label": "EV charging points" },
+                { "value": "none", "label": "None" }
+              ]
+            },
+            {
+              "id": "general_bms",
+              "type": "yesno",
+              "label": "Do you have a Building Management System (BMS)?",
+              "added": true
+            },
+            {
+              "id": "general_bms_brand",
+              "type": "text",
+              "label": "Which BMS / brand?",
+              "added": true,
+              "showWhen": [
+                { "questionId": "general_bms", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "general_bms_scope",
+              "type": "multi",
+              "label": "What does the BMS control?",
+              "added": true,
+              "options": [
+                { "value": "guest_rooms", "label": "Guest rooms" },
+                { "value": "public_areas", "label": "Public / common areas" },
+                { "value": "plant_room", "label": "Plant room only" },
+                { "value": "kitchen", "label": "Kitchen" },
+                { "value": "spa_pool", "label": "Spa / pool" }
+              ],
+              "showWhen": [
+                { "questionId": "general_bms", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "general_epc_rating",
+              "type": "single",
+              "label": "Current EPC rating",
+              "added": true,
+              "options": [
+                { "value": "A", "label": "A" },
+                { "value": "B", "label": "B" },
+                { "value": "C", "label": "C" },
+                { "value": "D", "label": "D" },
+                { "value": "E", "label": "E" },
+                { "value": "F", "label": "F" },
+                { "value": "G", "label": "G" },
+                { "value": "unknown", "label": "Don't know" }
+              ]
+            },
+            {
+              "id": "general_epc_certificate",
+              "type": "file",
+              "label": "EPC certificate (if available)",
+              "added": true,
+              "showWhen": [
+                { "questionId": "general_epc_rating", "operator": "notEquals", "value": "unknown" }
+              ]
+            },
+            {
+              "id": "general_secr_required",
+              "type": "yesno",
+              "label": "Are you required to report under SECR or ESOS?",
+              "added": true,
+              "help": "Streamlined Energy & Carbon Reporting / Energy Savings Opportunity Scheme — typically applies to larger operators."
+            },
+            {
+              "id": "general_certifications",
+              "type": "multi",
+              "label": "Any current sustainability certifications?",
+              "added": true,
+              "options": [
+                { "value": "green_key", "label": "Green Key" },
+                { "value": "breeam", "label": "BREEAM" },
+                { "value": "green_tourism", "label": "Green Tourism" },
+                { "value": "earthcheck", "label": "EarthCheck" },
+                { "value": "none", "label": "None" },
+                { "value": "other", "label": "Other (please describe)" }
+              ]
+            },
+            {
+              "id": "general_certifications_other",
+              "type": "text",
+              "label": "Other certification — please name",
+              "added": true,
+              "showWhen": [
+                { "questionId": "general_certifications", "operator": "includes", "value": "other" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rooms",
+      "title": "Guest rooms",
+      "intro": "These questions are best answered by whoever knows the rooms day-to-day — usually housekeeping, maintenance, or the GM. Estimates are fine where exact numbers aren't to hand.",
+      "groups": [
+        {
+          "id": "rooms_hvac",
+          "title": "Heating, ventilation & air conditioning",
+          "questions": [
+            {
+              "id": "rooms_hvac_control",
+              "type": "single",
+              "label": "How are guest-room temperatures controlled?",
+              "options": [
+                { "value": "guest", "label": "Guest-controlled (in-room thermostat)" },
+                { "value": "central", "label": "Centrally managed" },
+                { "value": "hybrid", "label": "Hybrid — guest-controlled within a central range" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_keycard",
+              "type": "yesno",
+              "label": "Do guest rooms have key-card power switches?"
+            },
+            {
+              "id": "rooms_hvac_keycard_controls",
+              "type": "multi",
+              "label": "What does the key-card control?",
+              "options": [
+                { "value": "lighting", "label": "Lighting" },
+                { "value": "hvac", "label": "Heating / HVAC" },
+                { "value": "towel_rail", "label": "Bathroom towel rail" },
+                { "value": "sockets", "label": "Electrical sockets / plug points" }
+              ],
+              "showWhen": [
+                { "questionId": "rooms_hvac_keycard", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_no_keycard_lights_off",
+              "type": "longtext",
+              "label": "Without key-cards, would lights be turned off by colleagues during the day, and if so when?",
+              "showWhen": [
+                { "questionId": "rooms_hvac_keycard", "operator": "equals", "value": "no" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_occupancy_sensors",
+              "type": "yesno",
+              "label": "Do guest rooms have occupancy sensors?"
+            },
+            {
+              "id": "rooms_hvac_occupancy_what_off",
+              "type": "multi",
+              "label": "What does the occupancy sensor turn off?",
+              "options": [
+                { "value": "heating", "label": "Heating / HVAC" },
+                { "value": "lighting", "label": "Lighting" },
+                { "value": "other", "label": "Other" }
+              ],
+              "showWhen": [
+                { "questionId": "rooms_hvac_occupancy_sensors", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_setpoint_occupied",
+              "type": "number",
+              "label": "Standard temperature set-point for occupied rooms",
+              "unit": "°C"
+            },
+            {
+              "id": "rooms_hvac_setpoint_vacant",
+              "type": "number",
+              "label": "Standard temperature set-point for vacant rooms",
+              "unit": "°C"
+            },
+            {
+              "id": "rooms_hvac_adjust_after_checkout",
+              "type": "single",
+              "label": "How quickly are HVAC settings adjusted after checkout?",
+              "options": [
+                { "value": "lt_15", "label": "Within 15 minutes (automatic)" },
+                { "value": "15_60", "label": "15–60 minutes" },
+                { "value": "1_4h", "label": "1–4 hours" },
+                { "value": "same_day", "label": "Same day" },
+                { "value": "not_adjusted", "label": "Not adjusted" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_problem_rooms",
+              "type": "longtext",
+              "label": "Are certain room types known to consume more energy or be problematic?",
+              "help": "e.g. corner rooms, top floors, north-facing rooms"
+            },
+            {
+              "id": "rooms_hvac_window_response",
+              "type": "single",
+              "label": "When a guest opens a window or balcony door, does heating or cooling automatically reduce or stop?",
+              "added": true,
+              "options": [
+                { "value": "yes_auto", "label": "Yes — automatic via window sensor" },
+                { "value": "no", "label": "No — system continues running" },
+                { "value": "unknown", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_failures_12m",
+              "type": "single",
+              "label": "Roughly how many HVAC unit failures in the past 12 months took a guest room out of service?",
+              "added": true,
+              "options": [
+                { "value": "0", "label": "None" },
+                { "value": "1_5", "label": "1–5" },
+                { "value": "6_15", "label": "6–15" },
+                { "value": "gt_15", "label": "More than 15" },
+                { "value": "unknown", "label": "Don't know" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_motors_louder",
+              "type": "single",
+              "label": "Have any HVAC units, fans or pumps become noticeably noisier or rougher over the last year?",
+              "added": true,
+              "help": "A signal that maintenance may be due — useful for predictive-maintenance scoping.",
+              "options": [
+                { "value": "yes_several", "label": "Yes, several" },
+                { "value": "yes_few", "label": "A few" },
+                { "value": "no", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_filter_freq",
+              "type": "single",
+              "label": "How often are HVAC filters replaced?",
+              "options": [
+                { "value": "lt_3m", "label": "Less than 3 months" },
+                { "value": "3_6m", "label": "Every 3–6 months" },
+                { "value": "6_12m", "label": "Every 6–12 months" },
+                { "value": "gt_12m", "label": "More than 12 months / when needed" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_calibrated",
+              "type": "single",
+              "label": "Are thermostats and sensors calibrated regularly?",
+              "options": [
+                { "value": "yes", "label": "Yes — on a schedule" },
+                { "value": "ad_hoc", "label": "Only when issues are reported" },
+                { "value": "no", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_towel_rails_24_7",
+              "type": "yesno",
+              "label": "Are bathroom towel rails on 24/7?"
+            },
+            {
+              "id": "rooms_hvac_towel_rail_control",
+              "type": "longtext",
+              "label": "How are the towel rails controlled?",
+              "showWhen": [
+                { "questionId": "rooms_hvac_towel_rails_24_7", "operator": "equals", "value": "no" }
+              ]
+            },
+            {
+              "id": "rooms_hvac_other",
+              "type": "longtext",
+              "label": "Any other heating, ventilation or cooling issues you'd like to flag?"
+            }
+          ]
+        },
+        {
+          "id": "rooms_lighting",
+          "title": "Lighting",
+          "questions": [
+            {
+              "id": "rooms_lighting_led",
+              "type": "single",
+              "label": "Are guest rooms fitted with 100% LED lighting?",
+              "options": [
+                { "value": "all_led", "label": "Yes — all LED" },
+                { "value": "some_led", "label": "Some LEDs / mixed" },
+                { "value": "no_led", "label": "No LEDs" }
+              ]
+            },
+            {
+              "id": "rooms_lighting_non_led_describe",
+              "type": "longtext",
+              "label": "What lighting is used in the rooms?",
+              "showWhen": [
+                { "questionId": "rooms_lighting_led", "operator": "equals", "value": "no_led" }
+              ]
+            },
+            {
+              "id": "rooms_lighting_partial_describe",
+              "type": "longtext",
+              "label": "Which rooms or fittings are LED, and which aren't?",
+              "showWhen": [
+                { "questionId": "rooms_lighting_led", "operator": "equals", "value": "some_led" }
+              ]
+            },
+            {
+              "id": "rooms_lighting_corridors_motion",
+              "type": "yesno",
+              "label": "Are corridor lights on motion (PIR) sensors?",
+              "added": true
+            },
+            {
+              "id": "rooms_lighting_back_of_house_motion",
+              "type": "yesno",
+              "label": "Are back-of-house areas (storerooms, plant rooms, staff corridors) on motion sensors?",
+              "added": true
+            },
+            {
+              "id": "rooms_lighting_occupancy_drive_hvac",
+              "type": "longtext",
+              "label": "How is occupancy data used to adjust HVAC schedules or lighting controls in guest rooms?",
+              "help": "If you have a system that links occupancy to room conditioning, please describe."
+            }
+          ]
+        },
+        {
+          "id": "rooms_water",
+          "title": "Water",
+          "questions": [
+            {
+              "id": "rooms_water_hot_setpoint",
+              "type": "number",
+              "label": "Hot-water temperature set-point delivered to guest rooms",
+              "unit": "°C"
+            },
+            {
+              "id": "rooms_water_cylinder_temp",
+              "type": "number",
+              "label": "Stored hot-water cylinder / calorifier temperature",
+              "unit": "°C",
+              "added": true,
+              "help": "Often kept higher than the delivered temperature for Legionella control — typically around 60°C."
+            },
+            {
+              "id": "rooms_water_low_flow_showers",
+              "type": "single",
+              "label": "Are low-flow fixtures installed on showers?",
+              "options": [
+                { "value": "all", "label": "Yes — all showers" },
+                { "value": "some", "label": "Some" },
+                { "value": "none", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_water_low_flow_taps",
+              "type": "single",
+              "label": "Are low-flow fixtures installed on taps?",
+              "options": [
+                { "value": "all", "label": "Yes — all taps" },
+                { "value": "some", "label": "Some" },
+                { "value": "none", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_water_low_water_toilets",
+              "type": "single",
+              "label": "Are toilets low-water and/or dual-flush?",
+              "options": [
+                { "value": "all", "label": "Yes — all" },
+                { "value": "some", "label": "Some" },
+                { "value": "none", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_water_recirc_pump",
+              "type": "single",
+              "label": "Are hot-water recirculation pumps running continuously, or scheduled?",
+              "options": [
+                { "value": "continuous", "label": "Continuous" },
+                { "value": "scheduled", "label": "Scheduled" },
+                { "value": "demand", "label": "On demand" },
+                { "value": "no_recirc", "label": "No recirculation" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_water_leaks_history",
+              "type": "longtext",
+              "label": "Any rooms with recurring leaks, damp or musty smells?",
+              "added": true,
+              "help": "Useful for both maintenance prioritisation and identifying where acoustic leak detection might pay back."
+            }
+          ]
+        },
+        {
+          "id": "rooms_appliances",
+          "title": "In-room appliances",
+          "questions": [
+            {
+              "id": "rooms_appliances_in_room",
+              "type": "multi",
+              "label": "Which appliances are provided in guest rooms?",
+              "options": [
+                { "value": "tv", "label": "TV" },
+                { "value": "kettle", "label": "Kettle" },
+                { "value": "mini_fridge", "label": "Mini-fridge" },
+                { "value": "iron", "label": "Iron / trouser press" },
+                { "value": "hairdryer", "label": "Hairdryer" },
+                { "value": "coffee", "label": "Coffee machine" },
+                { "value": "safe", "label": "Safe" },
+                { "value": "other", "label": "Other" }
+              ]
+            },
+            {
+              "id": "rooms_appliances_off_when_empty",
+              "type": "single",
+              "label": "Are appliances turned off or unplugged when rooms are unoccupied?",
+              "options": [
+                { "value": "always", "label": "Always" },
+                { "value": "usually", "label": "Usually" },
+                { "value": "rarely", "label": "Rarely" },
+                { "value": "never", "label": "Never" },
+                { "value": "mixed", "label": "Mixed — depends on appliance" }
+              ]
+            },
+            {
+              "id": "rooms_appliances_minifridge_coverage",
+              "type": "single",
+              "label": "Are mini-fridges in every room or only some?",
+              "added": true,
+              "options": [
+                { "value": "all", "label": "All rooms" },
+                { "value": "some", "label": "Some room types only" },
+                { "value": "on_request", "label": "On request only" },
+                { "value": "none", "label": "None" }
+              ],
+              "showWhen": [
+                { "questionId": "rooms_appliances_in_room", "operator": "includes", "value": "mini_fridge" }
+              ]
+            },
+            {
+              "id": "rooms_appliances_minifridge_make",
+              "type": "text",
+              "label": "Make and model of mini-fridges",
+              "showWhen": [
+                { "questionId": "rooms_appliances_in_room", "operator": "includes", "value": "mini_fridge" }
+              ]
+            },
+            {
+              "id": "rooms_appliances_tv_eco",
+              "type": "yesno",
+              "label": "Are TVs set to eco-mode by default?"
+            }
+          ]
+        },
+        {
+          "id": "rooms_process",
+          "title": "Operational practice",
+          "questions": [
+            {
+              "id": "rooms_process_window_seals_checked",
+              "type": "single",
+              "label": "Are windows and balcony doors checked for sealing issues?",
+              "options": [
+                { "value": "scheduled", "label": "Yes — on a schedule" },
+                { "value": "ad_hoc", "label": "Ad-hoc / when reported" },
+                { "value": "no", "label": "No" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "rooms_process_complaints",
+              "type": "longtext",
+              "label": "Any recurring guest complaints that may indicate energy inefficiencies?",
+              "help": "e.g. rooms always too cold or too hot, draughts, AC noise, heating that takes ages to come on."
+            },
+            {
+              "id": "rooms_process_housekeeping_lights",
+              "type": "single",
+              "label": "Do housekeeping colleagues turn off lights after cleaning?",
+              "help": "Skip if key-cards or motion sensors handle this automatically.",
+              "options": [
+                { "value": "yes", "label": "Yes" },
+                { "value": "sometimes", "label": "Sometimes" },
+                { "value": "no", "label": "No" },
+                { "value": "unsure", "label": "Unsure" }
+              ]
+            },
+            {
+              "id": "rooms_process_housekeeping_lights_checklist",
+              "type": "yesno",
+              "label": "Is turning off lights part of the housekeeping checklist?",
+              "showWhen": [
+                { "questionId": "rooms_process_housekeeping_lights", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "rooms_process_housekeeping_hvac",
+              "type": "single",
+              "label": "Do housekeeping colleagues set HVAC to minimum after cleaning?",
+              "options": [
+                { "value": "yes", "label": "Yes" },
+                { "value": "sometimes", "label": "Sometimes" },
+                { "value": "no", "label": "No" },
+                { "value": "unsure", "label": "Unsure" }
+              ]
+            },
+            {
+              "id": "rooms_process_guest_awareness",
+              "type": "yesno",
+              "label": "Is there energy-saving guest communication in the rooms?"
+            },
+            {
+              "id": "rooms_process_guest_awareness_describe",
+              "type": "longtext",
+              "label": "Please describe (or attach) the guest communication",
+              "showWhen": [
+                { "questionId": "rooms_process_guest_awareness", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "rooms_process_guest_awareness_file",
+              "type": "file",
+              "label": "Upload an example of the guest comms (optional)",
+              "showWhen": [
+                { "questionId": "rooms_process_guest_awareness", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "rooms_process_issue_reporting",
+              "type": "longtext",
+              "label": "How does housekeeping report issues like stuck valves, faulty thermostats or HVAC problems?"
+            },
+            {
+              "id": "rooms_process_linen_change_policy",
+              "type": "longtext",
+              "label": "What is the linen and towel change policy for multi-night stays?"
+            },
+            {
+              "id": "rooms_process_checkout_to_checkin_avg",
+              "type": "single",
+              "label": "On average, how long does a room sit empty between checkout and the next check-in?",
+              "added": true,
+              "help": "Even rough estimates help us size the energy 'idle time' opportunity.",
+              "options": [
+                { "value": "lt_2h", "label": "Less than 2 hours" },
+                { "value": "2_4h", "label": "2–4 hours" },
+                { "value": "4_8h", "label": "4–8 hours" },
+                { "value": "8_24h", "label": "8–24 hours" },
+                { "value": "variable", "label": "Highly variable" }
+              ]
+            },
+            {
+              "id": "rooms_process_solar_gain_rooms",
+              "type": "single",
+              "label": "Roughly what proportion of guest rooms get strong direct afternoon sun (south or west-facing)?",
+              "added": true,
+              "options": [
+                { "value": "few", "label": "Few" },
+                { "value": "about_a_quarter", "label": "About a quarter" },
+                { "value": "about_half", "label": "About half" },
+                { "value": "most", "label": "Most" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "rooms_other",
+          "title": "Anything else",
+          "questions": [
+            {
+              "id": "rooms_other_notes",
+              "type": "longtext",
+              "label": "Anything else you'd like to add about energy use in the guest rooms?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "laundry",
+      "title": "Laundry",
+      "intro": "Best answered by whoever runs the laundry day-to-day — typically the maintenance lead or head of housekeeping. We'll ask you a few details for each washer and drier, so it helps to be near the machines if possible.",
+      "groups": [
+        {
+          "id": "laundry_overview",
+          "title": "Overview",
+          "questions": [
+            {
+              "id": "laundry_total_kg_per_day",
+              "type": "number",
+              "label": "Approximate total weight of laundry processed per day",
+              "unit": "kg",
+              "added": true,
+              "help": "Best benchmark for laundry energy intensity. A rough figure is fine."
+            },
+            {
+              "id": "laundry_main_load_type",
+              "type": "multi",
+              "label": "What forms the vast majority of your washing?",
+              "options": [
+                { "value": "bed_linen", "label": "Bed linen" },
+                { "value": "towels", "label": "Towels" },
+                { "value": "restaurant", "label": "Restaurant / F&B linen" },
+                { "value": "spa", "label": "Spa robes & towels" },
+                { "value": "uniforms", "label": "Staff uniforms" },
+                { "value": "other", "label": "Other" }
+              ]
+            },
+            {
+              "id": "laundry_days_per_week",
+              "type": "number",
+              "label": "How many days a week do you operate the laundry?",
+              "unit": "days"
+            },
+            {
+              "id": "laundry_first_load_time",
+              "type": "time",
+              "label": "Time of first load on a typical operating day"
+            },
+            {
+              "id": "laundry_final_load_time",
+              "type": "time",
+              "label": "Time of final load on a typical operating day"
+            },
+            {
+              "id": "laundry_off_at_end_of_day",
+              "type": "yesno",
+              "label": "Are machines turned off at the end of the day?"
+            },
+            {
+              "id": "laundry_breakdowns_12m",
+              "type": "single",
+              "label": "Roughly how many washer or drier breakdowns in the past 12 months?",
+              "added": true,
+              "options": [
+                { "value": "0", "label": "None" },
+                { "value": "1_3", "label": "1–3" },
+                { "value": "4_10", "label": "4–10" },
+                { "value": "gt_10", "label": "More than 10" },
+                { "value": "not_sure", "label": "Not sure" }
+              ]
+            },
+            {
+              "id": "laundry_pipes_insulated",
+              "type": "yesno",
+              "label": "Are the hot-water pipes feeding the laundry insulated?",
+              "added": true
+            },
+            {
+              "id": "laundry_heat_recovery",
+              "type": "yesno",
+              "label": "Is there any system to capture waste heat from rinse water or drier exhaust?",
+              "added": true
+            },
+            {
+              "id": "laundry_detergent_dosing",
+              "type": "single",
+              "label": "How is detergent dosed?",
+              "added": true,
+              "options": [
+                { "value": "automated", "label": "Automated dosing system" },
+                { "value": "manual", "label": "Manual" },
+                { "value": "mixed", "label": "Mixed" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "laundry_washers",
+          "title": "Washing machines",
+          "questions": [
+            {
+              "id": "laundry_washer_count",
+              "type": "number",
+              "label": "How many washing machines do you have?"
+            },
+            {
+              "id": "laundry_washer_details",
+              "type": "repeater",
+              "label": "Details for each washing machine",
+              "help": "Please complete one section per machine. If two machines are identical you can copy the answers across.",
+              "countQuestionId": "laundry_washer_count",
+              "itemNoun": "machine",
+              "subQuestions": [
+                {
+                  "id": "make",
+                  "type": "text",
+                  "label": "Make"
+                },
+                {
+                  "id": "model",
+                  "type": "text",
+                  "label": "Model"
+                },
+                {
+                  "id": "year_installed",
+                  "type": "number",
+                  "label": "Year installed"
+                },
+                {
+                  "id": "drum_volume_kg",
+                  "type": "number",
+                  "label": "Drum capacity",
+                  "unit": "kg"
+                },
+                {
+                  "id": "typical_load_pct",
+                  "type": "single",
+                  "label": "On average, how full is the drum per load?",
+                  "options": [
+                    { "value": "0_25", "label": "0–25%" },
+                    { "value": "25_50", "label": "25–50%" },
+                    { "value": "50_75", "label": "50–75%" },
+                    { "value": "75_100", "label": "75–100%" }
+                  ]
+                },
+                {
+                  "id": "typical_temp_c",
+                  "type": "number",
+                  "label": "Typical wash temperature",
+                  "unit": "°C"
+                },
+                {
+                  "id": "varies_by_load",
+                  "type": "yesno",
+                  "label": "Does the wash temperature vary by load type?"
+                },
+                {
+                  "id": "varies_by_load_describe",
+                  "type": "longtext",
+                  "label": "Please describe how it varies",
+                  "showWhen": [
+                    { "questionId": "varies_by_load", "operator": "equals", "value": "yes" }
+                  ]
+                },
+                {
+                  "id": "preheat",
+                  "type": "yesno",
+                  "label": "Are machines pre-heated before use?"
+                },
+                {
+                  "id": "preheat_time",
+                  "type": "time",
+                  "label": "Time pre-heat starts",
+                  "showWhen": [
+                    { "questionId": "preheat", "operator": "equals", "value": "yes" }
+                  ]
+                },
+                {
+                  "id": "spin_speed_rpm",
+                  "type": "number",
+                  "label": "Typical spin speed for bedding & towels",
+                  "unit": "rpm"
+                },
+                {
+                  "id": "cycle_time_min",
+                  "type": "number",
+                  "label": "Typical cycle length",
+                  "unit": "min"
+                },
+                {
+                  "id": "cycle_varies",
+                  "type": "yesno",
+                  "label": "Does the cycle length vary by load type?"
+                },
+                {
+                  "id": "cycle_varies_describe",
+                  "type": "longtext",
+                  "label": "Please describe how it varies",
+                  "showWhen": [
+                    { "questionId": "cycle_varies", "operator": "equals", "value": "yes" }
+                  ]
+                },
+                {
+                  "id": "loads_per_day",
+                  "type": "number",
+                  "label": "Typical loads per day on this machine"
+                },
+                {
+                  "id": "photo",
+                  "type": "file",
+                  "label": "Close-up photo of the machine (data plate visible if possible)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "laundry_driers",
+          "title": "Tumble driers",
+          "questions": [
+            {
+              "id": "laundry_drier_count",
+              "type": "number",
+              "label": "How many tumble driers do you have?"
+            },
+            {
+              "id": "laundry_drier_details",
+              "type": "repeater",
+              "label": "Details for each drier",
+              "countQuestionId": "laundry_drier_count",
+              "itemNoun": "drier",
+              "subQuestions": [
+                {
+                  "id": "make",
+                  "type": "text",
+                  "label": "Make"
+                },
+                {
+                  "id": "model",
+                  "type": "text",
+                  "label": "Model"
+                },
+                {
+                  "id": "year_installed",
+                  "type": "number",
+                  "label": "Year installed"
+                },
+                {
+                  "id": "is_heat_pump",
+                  "type": "yesno",
+                  "label": "Is this a heat-pump drier?"
+                },
+                {
+                  "id": "fuel",
+                  "type": "single",
+                  "label": "Drier fuel",
+                  "added": true,
+                  "options": [
+                    { "value": "gas", "label": "Gas" },
+                    { "value": "electric", "label": "Electric" },
+                    { "value": "other", "label": "Other" }
+                  ]
+                },
+                {
+                  "id": "drum_volume_kg",
+                  "type": "number",
+                  "label": "Drum capacity",
+                  "unit": "kg"
+                },
+                {
+                  "id": "typical_load_pct",
+                  "type": "single",
+                  "label": "On average, how full is the drum per load?",
+                  "options": [
+                    { "value": "0_25", "label": "0–25%" },
+                    { "value": "25_50", "label": "25–50%" },
+                    { "value": "50_75", "label": "50–75%" },
+                    { "value": "75_100", "label": "75–100%" }
+                  ]
+                },
+                {
+                  "id": "typical_temp",
+                  "type": "text",
+                  "label": "Typical drying temperature",
+                  "help": "If your machines use a setting like 'High / Medium / Low', that's fine."
+                },
+                {
+                  "id": "cycle_time_min",
+                  "type": "number",
+                  "label": "Typical cycle length",
+                  "unit": "min"
+                },
+                {
+                  "id": "loads_per_day",
+                  "type": "number",
+                  "label": "Typical loads per day on this drier"
+                },
+                {
+                  "id": "lint_trap_clean_freq",
+                  "type": "single",
+                  "label": "How often is the lint trap cleaned?",
+                  "added": true,
+                  "options": [
+                    { "value": "every_load", "label": "After every load" },
+                    { "value": "daily", "label": "Daily" },
+                    { "value": "weekly", "label": "Weekly" },
+                    { "value": "less", "label": "Less often" },
+                    { "value": "not_sure", "label": "Not sure" }
+                  ]
+                },
+                {
+                  "id": "photo",
+                  "type": "file",
+                  "label": "Close-up photo of the drier (data plate visible if possible)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "laundry_ironing",
+          "title": "Ironing & pressing",
+          "questions": [
+            {
+              "id": "laundry_ironers_present",
+              "type": "yesno",
+              "label": "Do you have flatwork ironers or roller irons on site?",
+              "added": true
+            },
+            {
+              "id": "laundry_ironer_count",
+              "type": "number",
+              "label": "How many flatwork / roller irons?",
+              "added": true,
+              "showWhen": [
+                { "questionId": "laundry_ironers_present", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_ironer_make_model",
+              "type": "text",
+              "label": "Make and model",
+              "added": true,
+              "showWhen": [
+                { "questionId": "laundry_ironers_present", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_ironer_fuel",
+              "type": "single",
+              "label": "Ironer fuel",
+              "added": true,
+              "options": [
+                { "value": "gas", "label": "Gas" },
+                { "value": "electric", "label": "Electric" },
+                { "value": "steam", "label": "Steam" }
+              ],
+              "showWhen": [
+                { "questionId": "laundry_ironers_present", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_ironer_hours_per_day",
+              "type": "number",
+              "label": "Hours of ironer operation on a typical day",
+              "unit": "hours",
+              "added": true,
+              "showWhen": [
+                { "questionId": "laundry_ironers_present", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_ironer_preheat_min",
+              "type": "number",
+              "label": "Minutes of pre-heat before first use",
+              "unit": "min",
+              "added": true,
+              "showWhen": [
+                { "questionId": "laundry_ironers_present", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_manual_ironing",
+              "type": "yesno",
+              "label": "Is there also manual hand-ironing?",
+              "added": true
+            }
+          ]
+        },
+        {
+          "id": "laundry_other",
+          "title": "Other",
+          "questions": [
+            {
+              "id": "laundry_guest_laundry_offered",
+              "type": "yesno",
+              "label": "Do you offer guest laundry as a service?"
+            },
+            {
+              "id": "laundry_dry_cleaning_offered",
+              "type": "yesno",
+              "label": "Do you offer dry cleaning?"
+            },
+            {
+              "id": "laundry_dry_cleaning_onsite",
+              "type": "single",
+              "label": "Is dry cleaning done on-site or outsourced?",
+              "options": [
+                { "value": "onsite", "label": "On-site" },
+                { "value": "outsourced", "label": "Outsourced" }
+              ],
+              "showWhen": [
+                { "questionId": "laundry_dry_cleaning_offered", "operator": "equals", "value": "yes" }
+              ]
+            },
+            {
+              "id": "laundry_efficiency_ideas",
+              "type": "longtext",
+              "label": "Any ideas you have for how the laundry could be more efficient?"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

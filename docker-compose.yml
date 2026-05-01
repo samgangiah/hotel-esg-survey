@@ -1,0 +1,15 @@
+services:
+  esg-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esg-app
+    restart: unless-stopped
+    networks:
+      - tunnel-network
+    environment:
+      - NODE_ENV=production
+
+networks:
+  tunnel-network:
+    external: true

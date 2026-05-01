@@ -1,0 +1,187 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { useFormStore } from "@/lib/store";
+import {
+  formSpec,
+  findGroupRef,
+  getGroup,
+  isLastGroup,
+  nextGroupRef,
+  prevGroupRef,
+} from "@/lib/form-data";
+import { isQuestionVisible } from "@/lib/conditions";
+import type { AnswerValue } from "@/lib/schema";
+import { ProgressStrip } from "./ProgressStrip";
+import { SectionNav } from "./SectionNav";
+import { MobileNav } from "./MobileNav";
+import { QuestionRenderer } from "./QuestionRenderer";
+
+export function Wizard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const showAdded = searchParams.get("showAdded") === "true";
+
+  const sectionId = searchParams.get("section") ?? formSpec.sections[0].id;
+  const sectionFallbackGroup =
+    formSpec.sections.find((s) => s.id === sectionId)?.groups[0]?.id ??
+    formSpec.sections[0].groups[0].id;
+  const groupId = searchParams.get("group") ?? sectionFallbackGroup;
+
+  const groupRef = findGroupRef(sectionId, groupId);
+  const ctx = groupRef ? getGroup(sectionId, groupId) : undefined;
+
+  const answers = useFormStore((s) => s.answers);
+  const setAnswer = useFormStore((s) => s.setAnswer);
+  const clearAnswer = useFormStore((s) => s.clearAnswer);
+  const attemptedAdvance = useFormStore((s) => s.attemptedAdvance);
+  const markAdvanceAttempted = useFormStore((s) => s.markAdvanceAttempted);
+
+  const showError = !!(ctx && attemptedAdvance[ctx.group.id]);
+
+  const visibleQuestions = useMemo(() => {
+    if (!ctx) return [];
+    return ctx.group.questions.filter((q) => isQuestionVisible(q, answers));
+  }, [ctx, answers]);
+
+  if (!groupRef || !ctx) {
+    return <div className="p-12 text-center text-muted">Section not found.</div>;
+  }
+
+  const { section, group } = ctx;
+  const isFirstGroupOfSection = section.groups[0].id === group.id;
+
+  const setValueWithCleanup = (id: string, v: AnswerValue) => {
+    setAnswer(id, v);
+    // Clear hidden questions whose `showWhen` no longer holds.
+    // We compute against the optimistic next state.
+    const nextAnswers = { ...answers, [id]: v };
+    for (const q of group.questions) {
+      if (!isQuestionVisible(q, nextAnswers) && answers[q.id] !== undefined) {
+        clearAnswer(q.id);
+      }
+    }
+  };
+
+  const navTo = (
+    nextSectionId: string,
+    nextGroupId: string,
+    options?: { scrollTop?: boolean }
+  ) => {
+    const qs = new URLSearchParams();
+    qs.set("section", nextSectionId);
+    qs.set("group", nextGroupId);
+    if (showAdded) qs.set("showAdded", "true");
+    router.push(`/?${qs.toString()}`);
+    if (options?.scrollTop !== false) {
+      requestAnimationFrame(() =>
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      );
+    }
+  };
+
+  const validateGroup = (): boolean => {
+    for (const q of visibleQuestions) {
+      if (!q.required) continue;
+      const v = answers[q.id];
+      const empty =
+        v === undefined ||
+        v === null ||
+        v === "" ||
+        (Array.isArray(v) && v.length === 0);
+      if (empty) return false;
+    }
+    return true;
+  };
+
+  const onNext = () => {
+    markAdvanceAttempted(group.id);
+    if (!validateGroup()) return;
+    if (isLastGroup(groupRef)) {
+      const qs = new URLSearchParams();
+      if (showAdded) qs.set("showAdded", "true");
+      router.push(`/review${qs.toString() ? `?${qs.toString()}` : ""}`);
+      return;
+    }
+    const next = nextGroupRef(groupRef);
+    if (next) navTo(next.sectionId, next.groupId);
+  };
+
+  const onBack = () => {
+    const prev = prevGroupRef(groupRef);
+    if (prev) navTo(prev.sectionId, prev.groupId);
+  };
+
+  return (
+    <div>
+      <ProgressStrip currentSectionIndex={groupRef.sectionIndex} />
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[240px_1fr] md:py-10">
+        <aside className="hidden md:block">
+          <div className="sticky top-6">
+            <SectionNav section={section} currentGroupId={group.id} />
+          </div>
+        </aside>
+
+        <main className="space-y-6">
+          <MobileNav section={section} currentGroupId={group.id} />
+
+          <header>
+            {isFirstGroupOfSection && (
+              <>
+                <h1 className="font-display text-3xl text-ink sm:text-[34px]">
+                  {section.title}
+                </h1>
+                {section.intro && (
+                  <p className="mt-3 max-w-prose text-muted">{section.intro}</p>
+                )}
+              </>
+            )}
+            {group.title && (
+              <h2
+                className={
+                  isFirstGroupOfSection
+                    ? "mt-6 font-display text-xl text-ink"
+                    : "font-display text-2xl text-ink"
+                }
+              >
+                {group.title}
+              </h2>
+            )}
+          </header>
+
+          <Card className="divide-y divide-line">
+            {visibleQuestions.map((q) => (
+              <div key={q.id} className="px-6 py-6">
+                <QuestionRenderer
+                  question={q}
+                  scope={answers}
+                  getValue={(id) => answers[id]}
+                  setValue={setValueWithCleanup}
+                  showError={showError}
+                />
+              </div>
+            ))}
+          </Card>
+
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={onBack}
+              disabled={!prevGroupRef(groupRef)}
+            >
+              Back
+            </Button>
+            <Button onClick={onNext} size="lg">
+              {isLastGroup(groupRef)
+                ? formSpec.meta.submitButtonLabel
+                : "Next"}
+            </Button>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
