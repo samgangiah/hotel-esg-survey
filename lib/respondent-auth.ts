@@ -7,7 +7,7 @@ export interface RespondentAuth {
   respondentId: string;
   email: string;
   name: string;
-  isSiteAdmin: boolean;
+  isOperatorAdmin: boolean;
 }
 
 /**
@@ -36,6 +36,6 @@ export async function requireRespondent(): Promise<RespondentAuth> {
     respondentId: session.respondent.id,
     email: session.respondent.email,
     name: session.respondent.name,
-    isSiteAdmin: session.respondent.isSiteAdmin,
+    isOperatorAdmin: session.respondent.isOperatorAdmin,
   };
 }

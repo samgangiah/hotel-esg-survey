@@ -12,9 +12,12 @@ datasource db {
 
 // -----------------------------------------------------------------------------
 // Tenancy & physical structure
+//
+// The customer is an Operator (hotel group / chain / management company).
+// Sites belong to an Operator. Buildings belong to a Site.
 // -----------------------------------------------------------------------------
 
-model Organisation {
+model Operator {
   id        String    @id @default(cuid())
   name      String
   createdAt DateTime  @default(now())
@@ -26,19 +29,19 @@ model Organisation {
 
 model Site {
   id                String    @id @default(cuid())
-  organisationId    String
+  operatorId        String
   name              String
   address           String?
   primaryBuildingId String?   @unique
   createdAt         DateTime  @default(now())
   deletedAt         DateTime?
 
-  organisation    Organisation     @relation(fields: [organisationId], references: [id])
+  operator        Operator         @relation(fields: [operatorId], references: [id])
   buildings       Building[]       @relation("SiteBuildings")
   primaryBuilding Building?        @relation("PrimaryBuilding", fields: [primaryBuildingId], references: [id])
   surveyInstances SurveyInstance[]
 
-  @@index([organisationId])
+  @@index([operatorId])
 }
 
 model Building {
@@ -108,27 +111,28 @@ model SurveyInstance {
 }
 
 // -----------------------------------------------------------------------------
-// People (no accounts — invited respondents only)
+// People — Respondents are the user-facing identity. No accounts, no passwords.
+// The Operator Admin is just a Respondent with isOperatorAdmin = true.
 // -----------------------------------------------------------------------------
 
 model Respondent {
-  id             String    @id @default(cuid())
-  organisationId String
-  email          String
-  name           String
-  phone          String?
-  isSiteAdmin    Boolean   @default(false)
-  emailInvalid   Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  deletedAt      DateTime?
+  id              String    @id @default(cuid())
+  operatorId      String
+  email           String
+  name            String
+  phone           String?
+  isOperatorAdmin Boolean   @default(false)
+  emailInvalid    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
 
-  organisation Organisation @relation(fields: [organisationId], references: [id])
-  assignments  Assignment[]
-  answers      Answer[]
-  sessions     Session[]
+  operator    Operator     @relation(fields: [operatorId], references: [id])
+  assignments Assignment[]
+  answers     Answer[]
+  sessions    Session[]
 
-  @@unique([organisationId, email])
-  @@index([organisationId])
+  @@unique([operatorId, email])
+  @@index([operatorId])
 }
 
 // -----------------------------------------------------------------------------
@@ -140,7 +144,7 @@ model Assignment {
   surveyInstanceId String
   respondentId     String
   role             String   // gm | engineering | housekeeping | laundry | finance | energy_manager
-  sectionId        String   // matches questions.json section.id (or 'all' for site admins)
+  sectionId        String   // matches questions.json section.id (or 'all' for operator admins)
   buildingId       String?  // null for site/org-level sections
   status           String   @default("pending") // pending | opened | submitted | abandoned
   createdAt        DateTime @default(now())
@@ -210,33 +214,33 @@ model Session {
 }
 
 // -----------------------------------------------------------------------------
-// Operator (Sam) — separate auth surface, single user for now
+// Platform Admin (Sam) — separate auth surface, separate sessions
 // -----------------------------------------------------------------------------
 
-model Operator {
+model PlatformAdmin {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
   createdAt DateTime @default(now())
 
-  sessions OperatorSession[]
+  sessions PlatformAdminSession[]
 }
 
-model OperatorSession {
-  id         String   @id @default(cuid())
-  operatorId String
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @default(now())
-  expiresAt  DateTime
+model PlatformAdminSession {
+  id              String   @id @default(cuid())
+  platformAdminId String
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+  expiresAt       DateTime
 
-  operator Operator @relation(fields: [operatorId], references: [id])
+  platformAdmin PlatformAdmin @relation(fields: [platformAdminId], references: [id])
 
-  @@index([operatorId])
+  @@index([platformAdminId])
 }
 
-model OperatorLoginToken {
+model PlatformAdminLoginToken {
   id         String    @id @default(cuid())
   email      String
   tokenHash  String    @unique
@@ -283,7 +287,7 @@ model EmailEvent {
 
 model AuditLog {
   id          String   @id @default(cuid())
-  actorType   String   // operator | respondent | system
+  actorType   String   // platform_admin | respondent | system
   actorId     String?
   action      String
   targetType  String

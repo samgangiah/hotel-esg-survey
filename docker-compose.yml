@@ -14,7 +14,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://esg:${POSTGRES_PASSWORD:-changeme}@esg-db:5432/esg?schema=public
       - SESSION_SIGNING_KEY=${SESSION_SIGNING_KEY:-dev-only-change-in-prod}
-      - OPERATOR_EMAIL=${OPERATOR_EMAIL:-samendran@gmail.com}
+      - PLATFORM_ADMIN_EMAIL=${PLATFORM_ADMIN_EMAIL:-${OPERATOR_EMAIL:-samendran@gmail.com}}
+      - OPERATOR_EMAIL=${OPERATOR_EMAIL:-${PLATFORM_ADMIN_EMAIL:-samendran@gmail.com}}
       - APP_URL=${APP_URL:-https://esg.digitalrain.cloud}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM=${RESEND_FROM:-}

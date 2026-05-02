@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { Prisma } from "@prisma/client";
 
 interface AuditArgs {
-  actorType: "operator" | "respondent" | "system";
+  actorType: "platform_admin" | "respondent" | "system";
   actorId?: string | null;
   action: string;
   targetType: string;

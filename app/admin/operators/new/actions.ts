@@ -4,10 +4,10 @@ import { db } from "@/lib/db";
 import { newToken } from "@/lib/auth/tokens";
 import { sendInvitationEmail } from "@/lib/mailer";
 import { audit } from "@/lib/audit";
-import { requireOperator } from "@/lib/operator-auth";
+import { requirePlatformAdmin } from "@/lib/admin-auth";
 
-interface AddClientArgs {
-  organisationName: string;
+interface AddOperatorArgs {
+  operatorName: string;
   siteName: string;
   address: string | null;
   buildingNames: string[];
@@ -17,21 +17,19 @@ interface AddClientArgs {
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
-export async function addClient(
-  args: AddClientArgs
-): Promise<{ ok: true; siteId: string } | { ok: false; error: string }> {
-  const op = await requireOperator();
+export async function addOperator(
+  args: AddOperatorArgs
+): Promise<{ ok: true; operatorId: string } | { ok: false; error: string }> {
+  const me = await requirePlatformAdmin();
 
-  // Validation
-  if (!args.organisationName) return { ok: false, error: "Organisation name required." };
+  if (!args.operatorName) return { ok: false, error: "Operator name required." };
   if (!args.siteName) return { ok: false, error: "Site name required." };
   if (args.buildingNames.length === 0)
     return { ok: false, error: "At least one building required." };
-  if (!args.adminName) return { ok: false, error: "Site admin name required." };
+  if (!args.adminName) return { ok: false, error: "Operator Admin name required." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.adminEmail))
-    return { ok: false, error: "Site admin email looks invalid." };
+    return { ok: false, error: "Operator Admin email looks invalid." };
 
-  // Pick the latest hotel-energy template.
   const template = await db.surveyTemplate.findFirst({
     where: { slug: "hotel-energy" },
     orderBy: { version: "desc" },
@@ -39,21 +37,18 @@ export async function addClient(
   if (!template) {
     return {
       ok: false,
-      error: "No survey template seeded yet — run `npm run db:seed`.",
+      error: "No survey template seeded yet — run `node scripts/seed.cjs`.",
     };
   }
 
-  // Atomic-ish creation. We use a transaction.
   const result = await db.$transaction(async (tx) => {
-    const org = await tx.organisation.create({
-      data: { name: args.organisationName },
+    const operator = await tx.operator.create({
+      data: { name: args.operatorName },
     });
 
-    // Create site without primaryBuildingId, then create buildings, then
-    // backfill primaryBuildingId.
     const site = await tx.site.create({
       data: {
-        organisationId: org.id,
+        operatorId: operator.id,
         name: args.siteName,
         address: args.address,
       },
@@ -74,10 +69,10 @@ export async function addClient(
 
     const respondent = await tx.respondent.create({
       data: {
-        organisationId: org.id,
+        operatorId: operator.id,
         email: args.adminEmail,
         name: args.adminName,
-        isSiteAdmin: true,
+        isOperatorAdmin: true,
       },
     });
 
@@ -90,8 +85,6 @@ export async function addClient(
       },
     });
 
-    // Site Admin gets one catch-all assignment that lets them answer everything.
-    // Phase 1 will refine this into per-section assignments.
     const assignment = await tx.assignment.create({
       data: {
         surveyInstanceId: surveyInstance.id,
@@ -111,10 +104,9 @@ export async function addClient(
       },
     });
 
-    return { org, site, buildings, respondent, surveyInstance, assignment, invitation, token };
+    return { operator, site, buildings, respondent, surveyInstance, assignment, invitation, token };
   });
 
-  // Send invite (stubbed — logs the link).
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   const magicLink = `${appUrl}/r/${result.token}`;
   await sendInvitationEmail({
@@ -122,22 +114,23 @@ export async function addClient(
     toName: args.adminName,
     magicLink,
     siteName: args.siteName,
-    inviterName: op.name,
-    roleLabel: "Site Admin (full survey access)",
+    inviterName: me.name,
+    roleLabel: "Operator Admin (full survey access)",
   });
 
   await audit({
-    actorType: "operator",
-    actorId: op.operatorId,
-    action: "client.added",
-    targetType: "Site",
-    targetId: result.site.id,
+    actorType: "platform_admin",
+    actorId: me.platformAdminId,
+    action: "operator.added",
+    targetType: "Operator",
+    targetId: result.operator.id,
     payload: {
-      organisationName: args.organisationName,
+      operatorName: args.operatorName,
+      siteName: args.siteName,
       buildings: args.buildingNames,
       adminEmail: args.adminEmail,
     },
   });
 
-  return { ok: true, siteId: result.site.id };
+  return { ok: true, operatorId: result.operator.id };
 }

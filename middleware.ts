@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Edge-runtime middleware. Cannot touch Prisma. Only checks the *signature* on
-// the operator cookie — the page itself does the DB lookup for the session.
+// the admin cookie — the page itself does the DB lookup for the session.
 //
-// This is a coarse first gate, not the only one. Even if a forged cookie passes
-// the signature (it won't, the key is server-side), the page lookup will fail.
+// Coarse first gate, not the only one. Even if a forged cookie passed the
+// signature (it can't — the key is server-side), the page lookup would fail.
 
-const OPERATOR_COOKIE = "esg_operator";
+const ADMIN_COOKIE = "esg_admin";
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const path = url.pathname;
 
-  // Operator console: gated except for the login + verify entry points.
-  if (path.startsWith("/operator")) {
-    if (path === "/operator/login" || path.startsWith("/operator/verify")) {
+  // Platform admin portal: gated except for the login + verify entry points.
+  if (path.startsWith("/admin")) {
+    if (path === "/admin/login" || path.startsWith("/admin/verify")) {
       return NextResponse.next();
     }
-    const cookie = req.cookies.get(OPERATOR_COOKIE)?.value;
+    const cookie = req.cookies.get(ADMIN_COOKIE)?.value;
     if (!cookie || !(await isSignatureValid(cookie))) {
       const loginUrl = url.clone();
-      loginUrl.pathname = "/operator/login";
+      loginUrl.pathname = "/admin/login";
       loginUrl.search = "";
       return NextResponse.redirect(loginUrl);
     }
@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/operator/:path*"],
+  matcher: ["/admin/:path*"],
 };
 
 // --- Edge-compatible HMAC verification (Web Crypto, not Node crypto) -------

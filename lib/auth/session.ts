@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const RESPONDENT_COOKIE = "esg_session";
-const OPERATOR_COOKIE = "esg_operator";
+const ADMIN_COOKIE = "esg_admin";
 const NINETY_DAYS = 90 * 24 * 60 * 60;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60;
 
@@ -64,11 +64,11 @@ export async function clearRespondentSession() {
   c.delete(RESPONDENT_COOKIE);
 }
 
-// --- Operator session (24-hour, shorter window — higher-trust account) -----
+// --- Platform Admin session (24-hour, shorter window — higher-trust account)
 
-export async function setOperatorSession(sessionId: string) {
+export async function setPlatformAdminSession(sessionId: string) {
   const c = await cookies();
-  c.set(OPERATOR_COOKIE, pack(sessionId), {
+  c.set(ADMIN_COOKIE, pack(sessionId), {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
@@ -77,19 +77,19 @@ export async function setOperatorSession(sessionId: string) {
   });
 }
 
-export async function getOperatorSessionId(): Promise<string | null> {
+export async function getPlatformAdminSessionId(): Promise<string | null> {
   const c = await cookies();
-  return unpack(c.get(OPERATOR_COOKIE)?.value);
+  return unpack(c.get(ADMIN_COOKIE)?.value);
 }
 
-export async function clearOperatorSession() {
+export async function clearPlatformAdminSession() {
   const c = await cookies();
-  c.delete(OPERATOR_COOKIE);
+  c.delete(ADMIN_COOKIE);
 }
 
 // --- Edge-runtime-safe cookie name accessors (for middleware) --------------
 
 export const COOKIE_NAMES = {
   respondent: RESPONDENT_COOKIE,
-  operator: OPERATOR_COOKIE,
+  admin: ADMIN_COOKIE,
 };
