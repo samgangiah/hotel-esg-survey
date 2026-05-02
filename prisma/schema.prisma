@@ -236,6 +236,17 @@ model OperatorSession {
   @@index([operatorId])
 }
 
+model OperatorLoginToken {
+  id         String    @id @default(cuid())
+  email      String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+}
+
 // -----------------------------------------------------------------------------
 // Reports
 // -----------------------------------------------------------------------------
