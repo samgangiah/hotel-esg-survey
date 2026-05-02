@@ -209,6 +209,8 @@ function AnswerView({
   }
 
   if (question.type === "number") {
+    if (value === "n/a")
+      return <span className="text-muted">Not applicable</span>;
     return (
       <span>
         {String(value ?? "—")}

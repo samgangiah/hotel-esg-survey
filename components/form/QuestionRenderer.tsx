@@ -94,7 +94,7 @@ function renderInput(
     case "number":
       return (
         <NumberInput
-          value={value as number | undefined}
+          value={value as number | "n/a" | undefined}
           unit={q.unit}
           onChange={(v) => set(v)}
         />
