@@ -2,4 +2,10 @@ node_modules
 .next
 .DS_Store
 *.tsbuildinfo
-.env*
+
+# Env files: ignore real ones, commit the example.
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example

@@ -5,10 +5,41 @@ services:
       dockerfile: Dockerfile
     container_name: esg-app
     restart: unless-stopped
+    depends_on:
+      esg-db:
+        condition: service_healthy
     networks:
       - tunnel-network
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=postgresql://esg:${POSTGRES_PASSWORD:-changeme}@esg-db:5432/esg?schema=public
+      - SESSION_SIGNING_KEY=${SESSION_SIGNING_KEY:-dev-only-change-in-prod}
+      - OPERATOR_EMAIL=${OPERATOR_EMAIL:-samendran@gmail.com}
+      - APP_URL=${APP_URL:-https://esg.digitalrain.cloud}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM=${RESEND_FROM:-}
+
+  esg-db:
+    image: postgres:16-alpine
+    container_name: esg-db
+    restart: unless-stopped
+    networks:
+      - tunnel-network
+    environment:
+      - POSTGRES_USER=esg
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=esg
+    volumes:
+      - esg-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esg -d esg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  esg-db-data:
+    name: esg-db-data
 
 networks:
   tunnel-network:

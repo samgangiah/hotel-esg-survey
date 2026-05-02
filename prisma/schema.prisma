@@ -1,0 +1,286 @@
+// Hotel ESG Survey platform — data model
+// See PROJECT.md §3 for the rationale behind every choice.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Tenancy & physical structure
+// -----------------------------------------------------------------------------
+
+model Organisation {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  sites       Site[]
+  respondents Respondent[]
+}
+
+model Site {
+  id                String    @id @default(cuid())
+  organisationId    String
+  name              String
+  address           String?
+  primaryBuildingId String?   @unique
+  createdAt         DateTime  @default(now())
+  deletedAt         DateTime?
+
+  organisation    Organisation     @relation(fields: [organisationId], references: [id])
+  buildings       Building[]       @relation("SiteBuildings")
+  primaryBuilding Building?        @relation("PrimaryBuilding", fields: [primaryBuildingId], references: [id])
+  surveyInstances SurveyInstance[]
+
+  @@index([organisationId])
+}
+
+model Building {
+  id        String    @id @default(cuid())
+  siteId    String
+  name      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  site        Site         @relation("SiteBuildings", fields: [siteId], references: [id])
+  primaryFor  Site?        @relation("PrimaryBuilding")
+  answers     Answer[]
+  assignments Assignment[]
+
+  @@index([siteId])
+}
+
+// -----------------------------------------------------------------------------
+// Survey templates (versioned, immutable per version)
+// -----------------------------------------------------------------------------
+
+model SurveyTemplate {
+  id         String   @id @default(cuid())
+  slug       String
+  version    Int
+  schemaJson Json
+  createdAt  DateTime @default(now())
+
+  instances SurveyInstance[]
+
+  @@unique([slug, version])
+}
+
+// -----------------------------------------------------------------------------
+// Survey instances and answers
+// -----------------------------------------------------------------------------
+
+enum SurveyInstanceStatus {
+  draft
+  in_progress
+  submitted
+  locked
+  abandoned
+}
+
+model SurveyInstance {
+  id                 String               @id @default(cuid())
+  siteId             String
+  templateId         String
+  status             SurveyInstanceStatus @default(draft)
+  windowOpensAt      DateTime?
+  windowClosesAt     DateTime?
+  previousInstanceId String?
+  createdAt          DateTime             @default(now())
+  lockedAt           DateTime?
+
+  site        Site             @relation(fields: [siteId], references: [id])
+  template    SurveyTemplate   @relation(fields: [templateId], references: [id])
+  previous    SurveyInstance?  @relation("Repeat", fields: [previousInstanceId], references: [id])
+  next        SurveyInstance[] @relation("Repeat")
+  assignments Assignment[]
+  answers     Answer[]
+  reports     Report[]
+
+  @@index([siteId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// People (no accounts — invited respondents only)
+// -----------------------------------------------------------------------------
+
+model Respondent {
+  id             String    @id @default(cuid())
+  organisationId String
+  email          String
+  name           String
+  phone          String?
+  isSiteAdmin    Boolean   @default(false)
+  emailInvalid   Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  assignments  Assignment[]
+  answers      Answer[]
+  sessions     Session[]
+
+  @@unique([organisationId, email])
+  @@index([organisationId])
+}
+
+// -----------------------------------------------------------------------------
+// Assignments — the unit of work
+// -----------------------------------------------------------------------------
+
+model Assignment {
+  id               String   @id @default(cuid())
+  surveyInstanceId String
+  respondentId     String
+  role             String   // gm | engineering | housekeeping | laundry | finance | energy_manager
+  sectionId        String   // matches questions.json section.id (or 'all' for site admins)
+  buildingId       String?  // null for site/org-level sections
+  status           String   @default("pending") // pending | opened | submitted | abandoned
+  createdAt        DateTime @default(now())
+
+  surveyInstance SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+  respondent     Respondent     @relation(fields: [respondentId], references: [id])
+  building       Building?      @relation(fields: [buildingId], references: [id])
+  invitations    Invitation[]
+
+  @@unique([surveyInstanceId, respondentId, role, sectionId, buildingId])
+  @@index([surveyInstanceId])
+  @@index([respondentId])
+}
+
+model Answer {
+  id               String   @id @default(cuid())
+  surveyInstanceId String
+  questionId       String
+  buildingId       String   // always anchored to a building (site-level → site.primaryBuildingId)
+  respondentId     String
+  valueJson        Json
+  answeredAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  surveyInstance SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+  building       Building       @relation(fields: [buildingId], references: [id])
+  respondent     Respondent     @relation(fields: [respondentId], references: [id])
+
+  @@unique([surveyInstanceId, questionId, buildingId])
+  @@index([surveyInstanceId])
+  @@index([respondentId])
+}
+
+// -----------------------------------------------------------------------------
+// Auth: magic links + non-transferable session binding
+// -----------------------------------------------------------------------------
+
+model Invitation {
+  id             String    @id @default(cuid())
+  assignmentId   String
+  tokenHash      String    @unique
+  sentAt         DateTime  @default(now())
+  openedAt       DateTime?
+  boundSessionId String?   @unique
+  expiresAt      DateTime
+
+  assignment   Assignment   @relation(fields: [assignmentId], references: [id])
+  boundSession Session?     @relation("InvitationBinding", fields: [boundSessionId], references: [id])
+  emailEvents  EmailEvent[]
+
+  @@index([assignmentId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  respondentId String
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  expiresAt    DateTime
+
+  respondent Respondent  @relation(fields: [respondentId], references: [id])
+  invitation Invitation? @relation("InvitationBinding")
+
+  @@index([respondentId])
+}
+
+// -----------------------------------------------------------------------------
+// Operator (Sam) — separate auth surface, single user for now
+// -----------------------------------------------------------------------------
+
+model Operator {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  sessions OperatorSession[]
+}
+
+model OperatorSession {
+  id         String   @id @default(cuid())
+  operatorId String
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  expiresAt  DateTime
+
+  operator Operator @relation(fields: [operatorId], references: [id])
+
+  @@index([operatorId])
+}
+
+// -----------------------------------------------------------------------------
+// Reports
+// -----------------------------------------------------------------------------
+
+model Report {
+  id               String   @id @default(cuid())
+  surveyInstanceId String
+  generatedAt      DateTime @default(now())
+  snapshotJson     Json
+  pdfPath          String?
+  status           String   @default("pending") // pending | generating | ready | failed
+
+  surveyInstance SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+
+  @@index([surveyInstanceId])
+}
+
+// -----------------------------------------------------------------------------
+// Observability: email events + audit log
+// -----------------------------------------------------------------------------
+
+model EmailEvent {
+  id           String   @id @default(cuid())
+  invitationId String
+  eventType    String   // delivered | bounced | opened | complained | failed
+  occurredAt   DateTime @default(now())
+  payloadJson  Json
+
+  invitation Invitation @relation(fields: [invitationId], references: [id])
+
+  @@index([invitationId])
+  @@index([eventType])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorType   String   // operator | respondent | system
+  actorId     String?
+  action      String
+  targetType  String
+  targetId    String
+  payloadJson Json?
+  occurredAt  DateTime @default(now())
+  ip          String?
+
+  @@index([targetType, targetId])
+  @@index([actorType, actorId])
+}

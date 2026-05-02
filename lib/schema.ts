@@ -29,6 +29,15 @@ export interface Option {
   label: string;
 }
 
+export type QuestionLevel = "org" | "site" | "building" | "department";
+export type Role =
+  | "gm"
+  | "engineering"
+  | "housekeeping"
+  | "laundry"
+  | "finance"
+  | "energy_manager";
+
 export interface Question {
   id: string;
   type: QuestionType;
@@ -40,6 +49,8 @@ export interface Question {
   multiple?: boolean;
   added?: boolean;
   showWhen?: Condition[];
+  // tagging — added in template v0.3
+  level?: QuestionLevel;
   // repeater-only
   countQuestionId?: string;
   itemNoun?: string;
@@ -50,6 +61,8 @@ export interface Group {
   id: string;
   title: string | null;
   questions: Question[];
+  // tagging — added in template v0.3. Which respondent roles see this group.
+  roles?: Role[];
 }
 
 export interface Section {
