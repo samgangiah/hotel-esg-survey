@@ -6,6 +6,13 @@ import { audit } from "@/lib/audit";
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
+function publicUrl(path: string, search?: Record<string, string>): URL {
+  const base = process.env.APP_URL ?? "http://localhost:3000";
+  const u = new URL(path, base);
+  if (search) for (const [k, v] of Object.entries(search)) u.searchParams.set(k, v);
+  return u;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -17,16 +24,14 @@ export async function GET(
     where: { tokenHash },
   });
 
-  const url = req.nextUrl.clone();
-
   if (
     !tokenRow ||
     tokenRow.consumedAt ||
     tokenRow.expiresAt < new Date()
   ) {
-    url.pathname = "/operator/login";
-    url.searchParams.set("err", "Link expired or already used.");
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(
+      publicUrl("/operator/login", { err: "Link expired or already used." })
+    );
   }
 
   // Look up operator + create session.
@@ -34,9 +39,9 @@ export async function GET(
     where: { email: tokenRow.email },
   });
   if (!operator) {
-    url.pathname = "/operator/login";
-    url.searchParams.set("err", "Operator account not found.");
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(
+      publicUrl("/operator/login", { err: "Operator account not found." })
+    );
   }
 
   // Mark token consumed and create session atomically.
@@ -70,7 +75,5 @@ export async function GET(
     targetId: session.id,
   });
 
-  url.pathname = "/operator";
-  url.search = "";
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(publicUrl("/operator"));
 }
