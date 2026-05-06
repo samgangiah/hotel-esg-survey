@@ -50,11 +50,13 @@ export default async function MagicLinkPage({
   const r = a.respondent;
   const site = a.surveyInstance.site;
 
+  const isOperatorAdmin = r.isOperatorAdmin;
   async function yes() {
     "use server";
     const result = await confirmIdentity(token);
     if (!result.ok) redirect(`/r/${token}?err=${encodeURIComponent(result.error)}`);
-    redirect("/survey");
+    // Operator Admins go to their portal; everyone else lands on the survey.
+    redirect(isOperatorAdmin ? "/operator" : "/survey");
   }
   async function no() {
     "use server";
