@@ -34,12 +34,33 @@ export default async function ProgressPage() {
           },
         },
       },
+      // Fetch every Respondent with their assignments so we can also surface
+      // assignments where buildingId is NULL (Operator-Admin "all" sentinels).
+      respondents: {
+        where: { deletedAt: null, isOperatorAdmin: true },
+        include: {
+          assignments: {
+            where: { buildingId: null },
+            include: {
+              invitations: { orderBy: { sentAt: "desc" }, take: 1 },
+            },
+          },
+        },
+      },
     },
   });
   if (!operator) return null;
 
   const buildings = operator.sites.flatMap((s) =>
     s.buildings.map((b) => ({ siteName: s.name, ...b }))
+  );
+
+  // Operator-Admin sentinel assignments (one row per admin, sectionId="all",
+  // buildingId=null) — these grant access across every building × every role.
+  const adminSentinels = operator.respondents.flatMap((r) =>
+    r.assignments
+      .filter((a) => a.sectionId === "all")
+      .map((a) => ({ ...a, respondent: r }))
   );
 
   return (
@@ -89,17 +110,12 @@ export default async function ProgressPage() {
                       </span>
                     </th>
                     {ROLE_KEYS.map((role) => {
+                      // Per-building, per-role assignments (Anna's
+                      // housekeeping at Main building, etc).
                       const cell = b.assignments.filter((a) => a.role === role);
-                      // Operator-Admin "all" assignments grant access to every
-                      // role implicitly — surface them too so Andrew shows up.
-                      const adminCells = b.assignments.filter(
-                        (a) =>
-                          a.respondent.isOperatorAdmin && a.sectionId === "all"
-                      );
-                      const merged = [...cell];
-                      for (const ac of adminCells) {
-                        if (!merged.find((m) => m.id === ac.id)) merged.push(ac);
-                      }
+                      // Operator-Admin sentinels apply across every building ×
+                      // every role — show them in every cell.
+                      const merged = [...cell, ...adminSentinels];
                       return (
                         <td key={role} className="px-3 py-3 align-top">
                           {merged.length === 0 ? (
