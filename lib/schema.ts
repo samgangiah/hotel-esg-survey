@@ -8,7 +8,25 @@ export type QuestionType =
   | "date"
   | "time"
   | "file"
-  | "repeater";
+  | "repeater"
+  | "table";
+
+export type TableCellType = "number" | "text";
+
+export interface TableRow {
+  id: string;
+  label: string;
+}
+
+export interface TableColumn {
+  id: string;
+  label: string;
+  type?: TableCellType; // defaults to "number"
+  unit?: string;
+}
+
+/** Stored value for a `table` question: { [rowId]: { [colId]: cellValue } }. */
+export type TableValue = Record<string, Record<string, string | number | "n/a" | undefined>>;
 
 export type ConditionOperator =
   | "equals"
@@ -55,6 +73,9 @@ export interface Question {
   countQuestionId?: string;
   itemNoun?: string;
   subQuestions?: Question[];
+  // table-only
+  rows?: TableRow[];
+  columns?: TableColumn[];
 }
 
 export interface Group {
@@ -101,6 +122,7 @@ export type AnswerValue =
   | string[]
   | StoredFile[]
   | RepeaterItem[]
+  | TableValue
   | null
   | undefined;
 

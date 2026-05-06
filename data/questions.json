@@ -3,7 +3,7 @@
     "title": "Hotel Energy & ESG Survey",
     "subtitle": "A short diagnostic to identify energy waste and improvement opportunities",
     "version": "0.3",
-    "scope": "Pilot — General, Guest Rooms and Laundry. Based on Penny Court's draft (v1) with typo fixes, normalised options, explicit conditional logic, repeater patterns for per-machine data, and additional questions flagged with \"added\": true.",
+    "scope": "Pilot — General, Guest Rooms and Laundry. v0.3 incorporates Penny Court's review feedback (no compulsory fields, summer/winter set-points, Yes/Some/No motion sensors, proportion follow-ups, monthly consumption table, etc.) Questions added by Claude on top of Penny's original draft are flagged with \"added\": true.",
     "estimatedMinutes": 20,
     "submitButtonLabel": "Review my answers",
     "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll come back to you within five working days with an opportunity report."
@@ -22,7 +22,6 @@
               "id": "general_respondent_name",
               "type": "text",
               "label": "Your name",
-              "required": true,
               "level": "site"
             },
             {
@@ -30,14 +29,12 @@
               "type": "text",
               "label": "Your role at the property",
               "help": "e.g. General Manager, Operations Director, Head of Maintenance",
-              "required": true,
               "level": "site"
             },
             {
               "id": "general_property_name",
               "type": "text",
               "label": "Property name",
-              "required": true,
               "level": "site"
             },
             {
@@ -45,7 +42,6 @@
               "type": "number",
               "label": "Number of guest rooms",
               "added": true,
-              "required": true,
               "level": "building"
             },
             {
@@ -100,10 +96,72 @@
               "level": "site"
             },
             {
-              "id": "general_monthly_consumption",
-              "type": "longtext",
+              "id": "general_monthly_consumption_table",
+              "type": "table",
               "label": "Total energy consumption by month over the last 12 months",
-              "help": "If you can share the kWh figures for each month rather than just the bills, please paste them here. Otherwise leave blank — we'll work from the bills.",
+              "help": "Enter kWh figures where you have them. Leave blank where you don't — anything you can give helps.",
+              "rows": [
+                {
+                  "id": "jan",
+                  "label": "January"
+                },
+                {
+                  "id": "feb",
+                  "label": "February"
+                },
+                {
+                  "id": "mar",
+                  "label": "March"
+                },
+                {
+                  "id": "apr",
+                  "label": "April"
+                },
+                {
+                  "id": "may",
+                  "label": "May"
+                },
+                {
+                  "id": "jun",
+                  "label": "June"
+                },
+                {
+                  "id": "jul",
+                  "label": "July"
+                },
+                {
+                  "id": "aug",
+                  "label": "August"
+                },
+                {
+                  "id": "sep",
+                  "label": "September"
+                },
+                {
+                  "id": "oct",
+                  "label": "October"
+                },
+                {
+                  "id": "nov",
+                  "label": "November"
+                },
+                {
+                  "id": "dec",
+                  "label": "December"
+                }
+              ],
+              "columns": [
+                {
+                  "id": "elec",
+                  "label": "Electricity (kWh)",
+                  "type": "number"
+                },
+                {
+                  "id": "gas",
+                  "label": "Gas (kWh)",
+                  "type": "number"
+                }
+              ],
               "level": "site"
             },
             {
@@ -172,6 +230,7 @@
               "id": "general_renewables",
               "type": "multi",
               "label": "Any on-site renewable or low-carbon energy generation?",
+              "help": "Select all that apply.",
               "added": true,
               "options": [
                 {
@@ -197,6 +256,68 @@
                 {
                   "value": "none",
                   "label": "None"
+                }
+              ],
+              "level": "site"
+            },
+            {
+              "id": "general_backup_power",
+              "type": "yesno",
+              "label": "Is there any back-up power generation on site (e.g. a diesel generator)?",
+              "added": true,
+              "level": "site"
+            },
+            {
+              "id": "general_backup_power_fuel",
+              "type": "multi",
+              "label": "What does the back-up generator run on?",
+              "help": "Select all that apply.",
+              "added": true,
+              "options": [
+                {
+                  "value": "diesel",
+                  "label": "Diesel"
+                },
+                {
+                  "value": "petrol",
+                  "label": "Petrol"
+                },
+                {
+                  "value": "gas",
+                  "label": "Gas"
+                },
+                {
+                  "value": "lpg",
+                  "label": "LPG"
+                },
+                {
+                  "value": "battery",
+                  "label": "Battery"
+                },
+                {
+                  "value": "other",
+                  "label": "Other"
+                }
+              ],
+              "showWhen": [
+                {
+                  "questionId": "general_backup_power",
+                  "operator": "equals",
+                  "value": "yes"
+                }
+              ],
+              "level": "site"
+            },
+            {
+              "id": "general_backup_power_describe",
+              "type": "longtext",
+              "label": "Briefly describe the back-up setup (size, when it's used, fuel storage on site)",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "general_backup_power",
+                  "operator": "equals",
+                  "value": "yes"
                 }
               ],
               "level": "site"
@@ -315,10 +436,24 @@
             },
             {
               "id": "general_secr_required",
-              "type": "yesno",
+              "type": "single",
               "label": "Are you required to report under SECR or ESOS?",
               "added": true,
               "help": "Streamlined Energy & Carbon Reporting / Energy Savings Opportunity Scheme — typically applies to larger operators.",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "unsure",
+                  "label": "Unsure"
+                }
+              ],
               "level": "org"
             },
             {
@@ -491,16 +626,30 @@
               "level": "building"
             },
             {
-              "id": "rooms_hvac_setpoint_occupied",
+              "id": "rooms_hvac_setpoint_occupied_winter",
               "type": "number",
-              "label": "Standard temperature set-point for occupied rooms",
+              "label": "Standard temperature set-point for occupied rooms — winter",
               "unit": "°C",
               "level": "building"
             },
             {
-              "id": "rooms_hvac_setpoint_vacant",
+              "id": "rooms_hvac_setpoint_occupied_summer",
               "type": "number",
-              "label": "Standard temperature set-point for vacant rooms",
+              "label": "Standard temperature set-point for occupied rooms — summer",
+              "unit": "°C",
+              "level": "building"
+            },
+            {
+              "id": "rooms_hvac_setpoint_vacant_winter",
+              "type": "number",
+              "label": "Standard temperature set-point for vacant rooms — winter",
+              "unit": "°C",
+              "level": "building"
+            },
+            {
+              "id": "rooms_hvac_setpoint_vacant_summer",
+              "type": "number",
+              "label": "Standard temperature set-point for vacant rooms — summer",
               "unit": "°C",
               "level": "building"
             },
@@ -533,10 +682,23 @@
               "level": "building"
             },
             {
-              "id": "rooms_hvac_problem_rooms",
-              "type": "longtext",
+              "id": "rooms_hvac_problem_rooms_present",
+              "type": "yesno",
               "label": "Are certain room types known to consume more energy or be problematic?",
+              "level": "building"
+            },
+            {
+              "id": "rooms_hvac_problem_rooms_describe",
+              "type": "longtext",
+              "label": "Please briefly describe",
               "help": "e.g. corner rooms, top floors, north-facing rooms",
+              "showWhen": [
+                {
+                  "questionId": "rooms_hvac_problem_rooms_present",
+                  "operator": "equals",
+                  "value": "yes"
+                }
+              ],
               "level": "building"
             },
             {
@@ -750,16 +912,52 @@
             },
             {
               "id": "rooms_lighting_corridors_motion",
-              "type": "yesno",
+              "type": "single",
               "label": "Are corridor lights on motion (PIR) sensors?",
               "added": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes — all corridors"
+                },
+                {
+                  "value": "some",
+                  "label": "Some"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "not_sure",
+                  "label": "Not sure"
+                }
+              ],
               "level": "building"
             },
             {
               "id": "rooms_lighting_back_of_house_motion",
-              "type": "yesno",
+              "type": "single",
               "label": "Are back-of-house areas (storerooms, plant rooms, staff corridors) on motion sensors?",
               "added": true,
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes — all areas"
+                },
+                {
+                  "value": "some",
+                  "label": "Some"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                },
+                {
+                  "value": "not_sure",
+                  "label": "Not sure"
+                }
+              ],
               "level": "building"
             },
             {
@@ -820,6 +1018,41 @@
               "level": "building"
             },
             {
+              "id": "rooms_water_low_flow_showers_proportion",
+              "type": "single",
+              "label": "Roughly what proportion of showers have low-flow fixtures?",
+              "options": [
+                {
+                  "value": "lt_25",
+                  "label": "Less than 25%"
+                },
+                {
+                  "value": "25_50",
+                  "label": "25–50%"
+                },
+                {
+                  "value": "50_75",
+                  "label": "50–75%"
+                },
+                {
+                  "value": "gt_75",
+                  "label": "More than 75%"
+                },
+                {
+                  "value": "not_sure",
+                  "label": "Not sure"
+                }
+              ],
+              "showWhen": [
+                {
+                  "questionId": "rooms_water_low_flow_showers",
+                  "operator": "equals",
+                  "value": "some"
+                }
+              ],
+              "level": "building"
+            },
+            {
               "id": "rooms_water_low_flow_taps",
               "type": "single",
               "label": "Are low-flow fixtures installed on taps?",
@@ -844,6 +1077,41 @@
               "level": "building"
             },
             {
+              "id": "rooms_water_low_flow_taps_proportion",
+              "type": "single",
+              "label": "Roughly what proportion of taps have low-flow fixtures?",
+              "options": [
+                {
+                  "value": "lt_25",
+                  "label": "Less than 25%"
+                },
+                {
+                  "value": "25_50",
+                  "label": "25–50%"
+                },
+                {
+                  "value": "50_75",
+                  "label": "50–75%"
+                },
+                {
+                  "value": "gt_75",
+                  "label": "More than 75%"
+                },
+                {
+                  "value": "not_sure",
+                  "label": "Not sure"
+                }
+              ],
+              "showWhen": [
+                {
+                  "questionId": "rooms_water_low_flow_taps",
+                  "operator": "equals",
+                  "value": "some"
+                }
+              ],
+              "level": "building"
+            },
+            {
               "id": "rooms_water_low_water_toilets",
               "type": "single",
               "label": "Are toilets low-water and/or dual-flush?",
@@ -863,6 +1131,41 @@
                 {
                   "value": "not_sure",
                   "label": "Not sure"
+                }
+              ],
+              "level": "building"
+            },
+            {
+              "id": "rooms_water_low_water_toilets_proportion",
+              "type": "single",
+              "label": "Roughly what proportion of toilets are low-water or dual-flush?",
+              "options": [
+                {
+                  "value": "lt_25",
+                  "label": "Less than 25%"
+                },
+                {
+                  "value": "25_50",
+                  "label": "25–50%"
+                },
+                {
+                  "value": "50_75",
+                  "label": "50–75%"
+                },
+                {
+                  "value": "gt_75",
+                  "label": "More than 75%"
+                },
+                {
+                  "value": "not_sure",
+                  "label": "Not sure"
+                }
+              ],
+              "showWhen": [
+                {
+                  "questionId": "rooms_water_low_water_toilets",
+                  "operator": "equals",
+                  "value": "some"
                 }
               ],
               "level": "building"
@@ -896,11 +1199,25 @@
               "level": "building"
             },
             {
-              "id": "rooms_water_leaks_history",
-              "type": "longtext",
+              "id": "rooms_water_leaks_history_present",
+              "type": "yesno",
               "label": "Any rooms with recurring leaks, damp or musty smells?",
               "added": true,
-              "help": "Useful for both maintenance prioritisation and identifying where acoustic leak detection might pay back.",
+              "help": "Useful for maintenance prioritisation and to identify where acoustic leak detection might pay back.",
+              "level": "building"
+            },
+            {
+              "id": "rooms_water_leaks_history_describe",
+              "type": "longtext",
+              "label": "If yes, please describe (which rooms, how often, what kind of issue)",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "rooms_water_leaks_history_present",
+                  "operator": "equals",
+                  "value": "yes"
+                }
+              ],
               "level": "building"
             }
           ],
@@ -916,6 +1233,7 @@
               "id": "rooms_appliances_in_room",
               "type": "multi",
               "label": "Which appliances are provided in guest rooms?",
+              "help": "Select all that apply.",
               "options": [
                 {
                   "value": "tv",
@@ -953,31 +1271,23 @@
               "level": "building"
             },
             {
-              "id": "rooms_appliances_off_when_empty",
-              "type": "single",
-              "label": "Are appliances turned off or unplugged when rooms are unoccupied?",
-              "options": [
+              "id": "rooms_appliances_in_room_other_describe",
+              "type": "text",
+              "label": "Please list the other appliances",
+              "showWhen": [
                 {
-                  "value": "always",
-                  "label": "Always"
-                },
-                {
-                  "value": "usually",
-                  "label": "Usually"
-                },
-                {
-                  "value": "rarely",
-                  "label": "Rarely"
-                },
-                {
-                  "value": "never",
-                  "label": "Never"
-                },
-                {
-                  "value": "mixed",
-                  "label": "Mixed — depends on appliance"
+                  "questionId": "rooms_appliances_in_room",
+                  "operator": "includes",
+                  "value": "other"
                 }
               ],
+              "level": "building"
+            },
+            {
+              "id": "rooms_appliances_off_when_empty",
+              "type": "longtext",
+              "label": "When a room is unoccupied, which appliances are typically turned off and which are left on?",
+              "help": "e.g. \"TVs and coffee machines are unplugged on stayover; mini-fridge stays on; kettles stay plugged in\". A short description is fine.",
               "level": "building"
             },
             {
@@ -1130,6 +1440,10 @@
                 {
                   "value": "unsure",
                   "label": "Unsure"
+                },
+                {
+                  "value": "not_required",
+                  "label": "Not required — handled automatically"
                 }
               ],
               "level": "building"
@@ -1233,6 +1547,10 @@
                 {
                   "value": "not_sure",
                   "label": "Not sure"
+                },
+                {
+                  "value": "not_an_issue",
+                  "label": "Not an issue at this property"
                 }
               ],
               "level": "building"
@@ -1284,6 +1602,7 @@
               "id": "laundry_main_load_type",
               "type": "multi",
               "label": "What forms the vast majority of your washing?",
+              "help": "Select all that apply.",
               "options": [
                 {
                   "value": "bed_linen",
@@ -1333,8 +1652,22 @@
             },
             {
               "id": "laundry_off_at_end_of_day",
-              "type": "yesno",
+              "type": "single",
               "label": "Are machines turned off at the end of the day?",
+              "options": [
+                {
+                  "value": "yes",
+                  "label": "Yes"
+                },
+                {
+                  "value": "sometimes",
+                  "label": "Sometimes"
+                },
+                {
+                  "value": "no",
+                  "label": "No"
+                }
+              ],
               "level": "building"
             },
             {
@@ -1495,25 +1828,6 @@
                   "showWhen": [
                     {
                       "questionId": "varies_by_load",
-                      "operator": "equals",
-                      "value": "yes"
-                    }
-                  ],
-                  "level": "building"
-                },
-                {
-                  "id": "preheat",
-                  "type": "yesno",
-                  "label": "Are machines pre-heated before use?",
-                  "level": "building"
-                },
-                {
-                  "id": "preheat_time",
-                  "type": "time",
-                  "label": "Time pre-heat starts",
-                  "showWhen": [
-                    {
-                      "questionId": "preheat",
                       "operator": "equals",
                       "value": "yes"
                     }

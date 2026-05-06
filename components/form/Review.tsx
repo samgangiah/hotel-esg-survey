@@ -15,6 +15,7 @@ import type {
   RepeaterItem,
   Section,
   StoredFile,
+  TableValue,
 } from "@/lib/schema";
 
 export function Review() {
@@ -187,6 +188,60 @@ function AnswerView({
           </li>
         ))}
       </ul>
+    );
+  }
+
+  if (question.type === "table") {
+    const data = (value as TableValue | undefined) ?? {};
+    const rows = question.rows ?? [];
+    const cols = question.columns ?? [];
+    const filledRows = rows.filter((r) =>
+      cols.some(
+        (c) =>
+          data[r.id]?.[c.id] !== undefined &&
+          data[r.id]?.[c.id] !== "" &&
+          data[r.id]?.[c.id] !== null
+      )
+    );
+    if (filledRows.length === 0)
+      return <span className="text-muted">—</span>;
+    return (
+      <div className="overflow-x-auto rounded border border-line/60 bg-canvas/30">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="border-b border-line/60">
+              <th className="px-2 py-1 text-left font-medium text-muted">&nbsp;</th>
+              {cols.map((c) => (
+                <th
+                  key={c.id}
+                  className="px-2 py-1 text-left font-medium text-muted"
+                >
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filledRows.map((r) => (
+              <tr key={r.id}>
+                <td className="px-2 py-1 text-ink">{r.label}</td>
+                {cols.map((c) => {
+                  const v = data[r.id]?.[c.id];
+                  return (
+                    <td key={c.id} className="px-2 py-1 text-ink">
+                      {v === undefined || v === "" ? (
+                        <span className="text-muted">—</span>
+                      ) : (
+                        String(v)
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   }
 

@@ -7,9 +7,11 @@ import { SectionNav } from "./SectionNav";
 
 export function MobileNav({
   section,
+  currentSectionId,
   currentGroupId,
 }: {
   section: Section;
+  currentSectionId: string;
   currentGroupId: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -32,17 +34,19 @@ export function MobileNav({
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="w-72 bg-white p-4 shadow-card">
+          <div
+            className="w-72 overflow-y-auto bg-white p-4 shadow-card"
+            onClick={() => setOpen(false)}
+          >
             <button
               type="button"
-              onClick={() => setOpen(false)}
               className="mb-4 flex items-center gap-2 text-sm text-muted"
             >
               <X className="h-4 w-4" />
               Close
             </button>
             <SectionNav
-              section={section}
+              currentSectionId={currentSectionId}
               currentGroupId={currentGroupId}
             />
           </div>

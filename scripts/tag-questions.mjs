@@ -45,6 +45,13 @@ const levelById = {
   general_certifications: "org",
   general_certifications_other: "org",
 
+  // v0.3 additions: site-level (default already 'site' for general but explicit
+  // for clarity / future-proofing).
+  general_monthly_consumption_table: "site",
+  general_backup_power: "site",
+  general_backup_power_fuel: "site",
+  general_backup_power_describe: "site",
+
   // (everything else in general defaults to 'site' via section default.)
 };
 

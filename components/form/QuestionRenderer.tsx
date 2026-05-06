@@ -7,10 +7,10 @@ import type {
   Question,
   RepeaterItem,
   StoredFile,
+  TableValue,
 } from "@/lib/schema";
 import { isQuestionVisible } from "@/lib/conditions";
 import { Pill } from "@/components/ui/Pill";
-import { cn } from "@/lib/utils";
 import { TextInput } from "./inputs/TextInput";
 import { LongText } from "./inputs/LongText";
 import { NumberInput } from "./inputs/NumberInput";
@@ -18,6 +18,7 @@ import { SingleSelect } from "./inputs/SingleSelect";
 import { MultiSelect } from "./inputs/MultiSelect";
 import { YesNo } from "./inputs/YesNo";
 import { FileInput } from "./inputs/FileInput";
+import { TableInput } from "./inputs/TableInput";
 import { Repeater } from "./Repeater";
 
 interface Props {
@@ -25,15 +26,17 @@ interface Props {
   scope: Answers;
   getValue: (id: string) => AnswerValue;
   setValue: (id: string, v: AnswerValue) => void;
-  showError?: boolean;
+  index?: number; // 1-based, for question numbering within a group
 }
+
+const MULTI_HINT = "Select all that apply.";
 
 export function QuestionRenderer({
   question,
   scope,
   getValue,
   setValue,
-  showError,
+  index,
 }: Props) {
   const searchParams = useSearchParams();
   const showAdded = searchParams.get("showAdded") === "true";
@@ -41,35 +44,32 @@ export function QuestionRenderer({
   if (!isQuestionVisible(question, scope)) return null;
 
   const value = getValue(question.id);
-  const isEmpty =
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    (Array.isArray(value) && value.length === 0);
-  const errored = showError && question.required && isEmpty;
+
+  // Auto-add "Select all that apply" on multi-select questions if not already in help.
+  const help =
+    question.type === "multi"
+      ? question.help && question.help.toLowerCase().includes("select all")
+        ? question.help
+        : question.help
+          ? `${question.help} (${MULTI_HINT})`
+          : MULTI_HINT
+      : question.help;
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <label className="font-medium text-ink">
-          {question.label}
-          {question.required && (
-            <span className="ml-1 text-danger" aria-hidden>
-              *
-            </span>
+          {typeof index === "number" && (
+            <span className="mr-2 text-muted">{index}.</span>
           )}
+          {question.label}
         </label>
         {showAdded && question.added && <Pill>new</Pill>}
       </div>
-      {question.help && (
-        <p className="text-sm text-muted">{question.help}</p>
-      )}
-      <div className={cn(errored && "rounded-control ring-1 ring-danger/40")}>
+      {help && <p className="text-sm text-muted">{help}</p>}
+      <div>
         {renderInput(question, value, (v) => setValue(question.id, v))}
       </div>
-      {errored && (
-        <p className="text-sm text-danger">This question is required.</p>
-      )}
     </div>
   );
 }
@@ -148,6 +148,15 @@ function renderInput(
         <Repeater
           question={q}
           items={(value as RepeaterItem[] | undefined) ?? []}
+        />
+      );
+    case "table":
+      return (
+        <TableInput
+          rows={q.rows ?? []}
+          columns={q.columns ?? []}
+          value={value as TableValue | undefined}
+          onChange={(v) => set(v)}
         />
       );
     default:
