@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronUp, Copy, Plus, Trash2 } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  ClipboardCopy,
+  Copy,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useFormStore } from "@/lib/store";
@@ -26,38 +33,68 @@ export function Repeater({
   const [openIndex, setOpenIndex] = useState<number | null>(
     count > 0 ? count - 1 : null
   );
+  // After we add/duplicate/copy-from-previous, this index is the one we want
+  // the page to scroll to.
+  const [pendingScroll, setPendingScroll] = useState<number | null>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Track most-recently-added so we can default-open it.
+  // Default-open the most recent item if nothing is open.
   useEffect(() => {
     if (count > 0 && openIndex === null) setOpenIndex(count - 1);
   }, [count, openIndex]);
 
+  // Scroll-to-new-card after an add/duplicate/copy-from-previous action.
+  useEffect(() => {
+    if (pendingScroll === null) return;
+    const el = cardRefs.current.get(pendingScroll);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setPendingScroll(null);
+  }, [pendingScroll]);
+
+  const setItem = (index: number, item: RepeaterItem) =>
+    setRepeaterItem(question.id, index, item);
+
+  const updateCountAnswer = (n: number) => {
+    if (question.countQuestionId) setAnswer(question.countQuestionId, n);
+  };
+
   const add = () => {
     const newCount = count + 1;
     setRepeaterCount(question.id, newCount);
-    if (question.countQuestionId) {
-      setAnswer(question.countQuestionId, newCount);
-    }
+    updateCountAnswer(newCount);
     setOpenIndex(newCount - 1);
+    setPendingScroll(newCount - 1);
+  };
+
+  const addFromPrevious = () => {
+    const source = items[items.length - 1];
+    const clone: RepeaterItem = source
+      ? JSON.parse(JSON.stringify(source))
+      : {};
+    const newCount = count + 1;
+    setRepeaterCount(question.id, newCount);
+    setItem(newCount - 1, clone);
+    updateCountAnswer(newCount);
+    setOpenIndex(newCount - 1);
+    setPendingScroll(newCount - 1);
   };
 
   const remove = (i: number) => {
     const next = items.filter((_, idx) => idx !== i);
     setRepeaterCount(question.id, next.length);
-    // Re-seed items with surviving content
-    next.forEach((item, idx) => setRepeaterItem(question.id, idx, item));
-    if (question.countQuestionId) {
-      setAnswer(question.countQuestionId, next.length);
-    }
+    next.forEach((item, idx) => setItem(idx, item));
+    updateCountAnswer(next.length);
     if (openIndex !== null && openIndex >= next.length) {
       setOpenIndex(next.length > 0 ? next.length - 1 : null);
     }
   };
 
   /**
-   * Duplicate the i-th item — append a deep-cloned copy at the end. Per
-   * Penny's review (v0.3): a laundry with 8 identical machines fills in the
-   * first one, clicks Duplicate seven times, and tweaks only the differences.
+   * Duplicate the i-th item — append a deep-cloned copy at the end.
+   * "A laundry with 8 identical machines fills in the first one, clicks
+   * Duplicate seven times, and tweaks only the differences."
    */
   const duplicate = (i: number) => {
     const source = items[i];
@@ -65,19 +102,16 @@ export function Repeater({
     const clone: RepeaterItem = JSON.parse(JSON.stringify(source));
     const newCount = count + 1;
     setRepeaterCount(question.id, newCount);
-    setRepeaterItem(question.id, newCount - 1, clone);
-    if (question.countQuestionId) {
-      setAnswer(question.countQuestionId, newCount);
-    }
+    setItem(newCount - 1, clone);
+    updateCountAnswer(newCount);
     setOpenIndex(newCount - 1);
+    setPendingScroll(newCount - 1);
   };
 
   if (count === 0) {
     return (
       <Card className="flex flex-col items-start gap-3 p-5">
-        <p className="text-sm text-muted">
-          No {noun}s added yet.
-        </p>
+        <p className="text-sm text-muted">No {noun}s added yet.</p>
         <Button variant="secondary" onClick={add}>
           <Plus className="h-4 w-4" /> Add a {noun}
         </Button>
@@ -98,11 +132,25 @@ export function Repeater({
           onToggle={() => setOpenIndex(openIndex === i ? null : i)}
           onRemove={() => remove(i)}
           onDuplicate={() => duplicate(i)}
+          registerRef={(el) => {
+            if (el) cardRefs.current.set(i, el);
+            else cardRefs.current.delete(i);
+          }}
         />
       ))}
-      <Button variant="secondary" onClick={add}>
-        <Plus className="h-4 w-4" /> Add another {noun}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={add}>
+          <Plus className="h-4 w-4" /> Add another {noun}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={addFromPrevious}
+          title={`Add a new ${noun} pre-filled from the previous one`}
+        >
+          <ClipboardCopy className="h-4 w-4" />
+          Copy from previous {noun}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -116,6 +164,7 @@ function RepeaterCard({
   onToggle,
   onRemove,
   onDuplicate,
+  registerRef,
 }: {
   index: number;
   total: number;
@@ -125,6 +174,7 @@ function RepeaterCard({
   onToggle: () => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  registerRef: (el: HTMLDivElement | null) => void;
 }) {
   const setRepeaterItem = useFormStore((s) => s.setRepeaterItem);
   const noun = question.itemNoun ?? "item";
@@ -136,8 +186,21 @@ function RepeaterCard({
   };
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 py-4">
+    <Card
+      ref={registerRef}
+      className={cn(
+        "overflow-hidden transition-shadow scroll-mt-24",
+        isOpen
+          ? "border-accent/50 shadow-[0_0_0_3px_rgba(47,93,80,0.08)]"
+          : ""
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 px-5 py-4",
+          isOpen && "bg-accent-soft/30"
+        )}
+      >
         <button
           type="button"
           onClick={onToggle}

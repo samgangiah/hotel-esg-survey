@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { ArrowRight, Bookmark, Check, CircleCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useFormStore } from "@/lib/store";
@@ -39,6 +39,8 @@ export function Wizard() {
   const answers = useFormStore((s) => s.answers);
   const setAnswer = useFormStore((s) => s.setAnswer);
   const clearAnswer = useFormStore((s) => s.clearAnswer);
+  const submittedSections = useFormStore((s) => s.submittedSections);
+  const markSectionSubmitted = useFormStore((s) => s.markSectionSubmitted);
 
   const visibleQuestions = useMemo(() => {
     if (!ctx) return [];
@@ -108,7 +110,12 @@ export function Wizard() {
     }
   };
 
-  // No required-field validation in v0.3 — every question may be left blank.
+  // Last page in this section? Determines whether Next becomes Submit-section.
+  const isLastGroupOfSection =
+    section.groups[section.groups.length - 1].id === group.id;
+  const isLastSection =
+    formSpec.sections[formSpec.sections.length - 1].id === section.id;
+
   const onNext = () => {
     if (isLastGroup(groupRef)) {
       const qs = new URLSearchParams();
@@ -120,6 +127,29 @@ export function Wizard() {
     if (next) navTo(next.sectionId, next.groupId);
   };
 
+  const onSubmitSection = () => {
+    markSectionSubmitted(section.id);
+    if (isLastSection) {
+      const qs = new URLSearchParams();
+      if (showAdded) qs.set("showAdded", "true");
+      router.push(`/review${qs.toString() ? `?${qs.toString()}` : ""}`);
+      return;
+    }
+    // Jump to first group of next section.
+    const sectionIdx = formSpec.sections.findIndex((s) => s.id === section.id);
+    const nextSection = formSpec.sections[sectionIdx + 1];
+    if (nextSection)
+      navTo(nextSection.id, nextSection.groups[0].id);
+  };
+
+  const onSaveForLater = () => {
+    const qs = new URLSearchParams();
+    qs.set("section", section.id);
+    qs.set("group", group.id);
+    if (showAdded) qs.set("showAdded", "true");
+    router.push(`/saved?${qs.toString()}`);
+  };
+
   const onBack = () => {
     const prev = prevGroupRef(groupRef);
     if (prev) navTo(prev.sectionId, prev.groupId);
@@ -128,7 +158,7 @@ export function Wizard() {
   return (
     <div>
       <ProgressStrip currentSectionIndex={groupRef.sectionIndex} />
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[240px_1fr] md:py-10">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[260px_1fr] md:py-10">
         <aside className="hidden md:block">
           <div className="sticky top-6">
             <SectionNav currentGroupId={group.id} currentSectionId={section.id} />
@@ -192,20 +222,44 @@ export function Wizard() {
             ))}
           </Card>
 
-          <div className="flex items-center justify-between gap-3 pt-2">
-            <Button
-              variant="secondary"
-              onClick={onBack}
-              disabled={!prevGroupRef(groupRef)}
-            >
-              Back
-            </Button>
-            <Button onClick={onNext} size="lg">
-              {isLastGroup(groupRef)
-                ? formSpec.meta.submitButtonLabel
-                : "Next"}
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={onBack}
+                disabled={!prevGroupRef(groupRef)}
+              >
+                Back
+              </Button>
+              <Button variant="ghost" onClick={onSaveForLater}>
+                <Bookmark className="h-4 w-4" />
+                Save for later
+              </Button>
+            </div>
+            {isLastGroupOfSection ? (
+              <Button onClick={onSubmitSection} size="lg">
+                <CircleCheck className="h-4 w-4" />
+                Submit{" "}
+                <span className="hidden sm:inline">
+                  Section {groupRef.sectionIndex + 1}: {section.title}
+                </span>
+                <span className="sm:hidden">this section</span>
+              </Button>
+            ) : (
+              <Button onClick={onNext} size="lg">
+                Next
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
           </div>
+
+          {submittedSections[section.id] && !isLastGroupOfSection && (
+            <p className="pt-1 text-xs text-muted">
+              <CircleCheck className="mr-1 inline-block h-3 w-3 align-text-bottom text-accent" />
+              You've previously submitted this section — your edits will
+              update the record on the next submit.
+            </p>
+          )}
         </main>
       </div>
     </div>

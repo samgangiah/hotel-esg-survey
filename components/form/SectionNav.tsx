@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Circle, CircleDot } from "lucide-react";
+import { Circle, CircleCheck, CircleDot, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFormStore } from "@/lib/store";
 import { formSpec } from "@/lib/form-data";
 import type { Group, Section } from "@/lib/schema";
 
 /**
- * v0.3 nav: every section + every group is visible and clickable. Respondents
- * can jump between any pair of groups in any order, regardless of which
- * section they're in.
+ * v0.4 nav: titled "Contents" in a card. Each section is labelled
+ * "Section 1: …" and the section header itself jumps to the section's first
+ * group. Every group is still clickable, free cross-section navigation.
  */
 export function SectionNav({
   currentSectionId,
@@ -21,53 +21,84 @@ export function SectionNav({
   currentGroupId: string;
 }) {
   const answers = useFormStore((s) => s.answers);
+  const submittedSections = useFormStore((s) => s.submittedSections);
   const params = useSearchParams();
   const showAdded = params.get("showAdded") === "true";
 
   return (
-    <nav className="space-y-4">
-      {formSpec.sections.map((s) => (
-        <div key={s.id} className="space-y-1">
-          <div
-            className={cn(
-              "px-3 text-xs font-medium uppercase tracking-wide",
-              s.id === currentSectionId ? "text-accent-deep" : "text-muted"
-            )}
-          >
-            {s.title}
-          </div>
-          <ul className="space-y-0.5">
-            {s.groups.map((g) => {
-              const hasAny = groupHasAnswer(g, answers);
-              const isCurrent =
-                g.id === currentGroupId && s.id === currentSectionId;
-              const href = buildHref(s, g, showAdded);
-              return (
-                <li key={g.id}>
-                  <Link
-                    href={href}
+    <nav className="rounded-card border border-line bg-white p-4">
+      <div className="mb-3 flex items-center gap-2 border-b border-line pb-3">
+        <ListOrdered className="h-4 w-4 text-accent-deep" />
+        <span className="font-display text-base font-semibold text-ink">
+          Contents
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {formSpec.sections.map((s, i) => {
+          const isCurrent = s.id === currentSectionId;
+          const isSubmitted = !!submittedSections[s.id];
+          const sectionHref = buildHref(s, s.groups[0], showAdded);
+          return (
+            <div key={s.id} className="space-y-1.5">
+              <Link
+                href={sectionHref}
+                className={cn(
+                  "flex items-center gap-2 rounded-control px-2 py-1 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                  isCurrent
+                    ? "text-accent-deep"
+                    : "text-ink/80 hover:text-accent-deep"
+                )}
+              >
+                {isSubmitted ? (
+                  <CircleCheck className="h-3.5 w-3.5 shrink-0 text-accent" />
+                ) : (
+                  <span
                     className={cn(
-                      "flex items-center gap-2 rounded-control px-3 py-1.5 text-sm transition-colors",
-                      isCurrent
-                        ? "bg-accent-soft/70 font-medium text-accent-deep"
-                        : "text-ink/80 hover:bg-accent-soft/40"
+                      "h-3.5 w-3.5 shrink-0 rounded-full border",
+                      isCurrent ? "border-accent" : "border-line"
                     )}
-                  >
-                    {hasAny ? (
-                      <CircleDot className="h-3.5 w-3.5 text-accent" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5 text-line" />
-                    )}
-                    <span className="truncate">
-                      {g.title ?? "Property details"}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+                  />
+                )}
+                <span>
+                  Section {i + 1}: {s.title}
+                </span>
+              </Link>
+
+              <ul className="ml-2 space-y-0.5 border-l border-line pl-3">
+                {s.groups.map((g) => {
+                  const hasAny = groupHasAnswer(g, answers);
+                  const isCurrentGroup =
+                    g.id === currentGroupId && s.id === currentSectionId;
+                  const href = buildHref(s, g, showAdded);
+                  return (
+                    <li key={g.id}>
+                      <Link
+                        href={href}
+                        className={cn(
+                          "flex items-center gap-2 rounded-control px-2 py-1.5 text-sm transition-colors",
+                          isCurrentGroup
+                            ? "bg-accent-soft/70 font-medium text-accent-deep"
+                            : "text-ink/80 hover:bg-accent-soft/40"
+                        )}
+                      >
+                        {hasAny ? (
+                          <CircleDot className="h-3.5 w-3.5 text-accent" />
+                        ) : (
+                          <Circle className="h-3.5 w-3.5 text-line" />
+                        )}
+                        <span className="truncate">
+                          {g.title ?? "Property details"}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
     </nav>
   );
 }

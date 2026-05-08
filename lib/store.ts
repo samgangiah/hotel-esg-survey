@@ -7,11 +7,13 @@ import type { Answers, AnswerValue, RepeaterItem } from "./schema";
 interface FormStore {
   answers: Answers;
   attemptedAdvance: Record<string, boolean>; // groupId -> whether user tried to advance
+  submittedSections: Record<string, boolean>; // sectionId -> submitted
   setAnswer: (id: string, value: AnswerValue) => void;
   clearAnswer: (id: string) => void;
   setRepeaterItem: (id: string, index: number, item: RepeaterItem) => void;
   setRepeaterCount: (id: string, count: number) => void;
   markAdvanceAttempted: (groupId: string) => void;
+  markSectionSubmitted: (sectionId: string) => void;
   reset: () => void;
 }
 
@@ -20,6 +22,7 @@ export const useFormStore = create<FormStore>()(
     (set) => ({
       answers: {},
       attemptedAdvance: {},
+      submittedSections: {},
       setAnswer: (id, value) =>
         set((s) => ({ answers: { ...s.answers, [id]: value } })),
       clearAnswer: (id) =>
@@ -45,7 +48,12 @@ export const useFormStore = create<FormStore>()(
         set((s) => ({
           attemptedAdvance: { ...s.attemptedAdvance, [groupId]: true },
         })),
-      reset: () => set({ answers: {}, attemptedAdvance: {} }),
+      markSectionSubmitted: (sectionId) =>
+        set((s) => ({
+          submittedSections: { ...s.submittedSections, [sectionId]: true },
+        })),
+      reset: () =>
+        set({ answers: {}, attemptedAdvance: {}, submittedSections: {} }),
     }),
     {
       name: "hotel-esg-survey-demo",
@@ -57,6 +65,7 @@ export const useFormStore = create<FormStore>()(
       partialize: (s) => ({
         answers: stripFiles(s.answers),
         attemptedAdvance: s.attemptedAdvance,
+        submittedSections: s.submittedSections,
       }),
     }
   )

@@ -2,11 +2,21 @@
   "meta": {
     "title": "Hotel Energy & ESG Survey",
     "subtitle": "A short diagnostic to identify energy waste and improvement opportunities",
-    "version": "0.3",
-    "scope": "Pilot — General, Guest Rooms and Laundry. v0.3 incorporates Penny Court's review feedback (no compulsory fields, summer/winter set-points, Yes/Some/No motion sensors, proportion follow-ups, monthly consumption table, etc.) Questions added by Claude on top of Penny's original draft are flagged with \"added\": true.",
-    "estimatedMinutes": 20,
+    "version": "0.4",
+    "scope": "Pilot — General, Guest Rooms and Laundry. v0.4 incorporates Penny Court's second-round review (cover page, per-section submit, save-for-later, contents panel polish, copy-from-previous on machines, plus content tweaks across heating, HVAC, mini-fridges, towel rails).",
     "submitButtonLabel": "Review my answers",
-    "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll come back to you within five working days with an opportunity report."
+    "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll come back to you within five working days with an opportunity report.",
+    "coverPage": {
+      "headline": "Welcome to the Hotel Energy & ESG Survey",
+      "intro": "Thank you for taking the time to fill this in. The answers will help us spot where energy is being wasted at your property and what changes are likely to pay back the fastest. There are no wrong answers and nothing is required — anything you can give us is useful.",
+      "tips": [
+        "**Different people can answer different sections.** Each invitee sees only the section relevant to them. Use 'Submit this section' when you've finished your part — someone else can pick up the next.",
+        "**Save and come back later.** 'Save for later' on any page keeps your progress on this device. Use the same link in your email to pick up where you left off.",
+        "**Estimates are fine.** Where you don't have an exact figure, your best guess is more useful than a blank.",
+        "**Photos help.** Where the form asks for an upload — energy bills, EPC, machine data plates — clear phone photos are completely fine."
+      ],
+      "ctaLabel": "Begin the survey"
+    }
   },
   "sections": [
     {
@@ -167,20 +177,20 @@
             {
               "id": "general_primary_heating",
               "type": "single",
-              "label": "Primary heating fuel",
+              "label": "Primary heating system",
               "added": true,
               "options": [
                 {
-                  "value": "gas",
-                  "label": "Mains gas boiler"
+                  "value": "central_gas",
+                  "label": "Central heating — mains gas boiler"
                 },
                 {
-                  "value": "oil",
-                  "label": "Oil"
+                  "value": "central_oil",
+                  "label": "Central heating — oil"
                 },
                 {
-                  "value": "lpg",
-                  "label": "LPG"
+                  "value": "central_lpg",
+                  "label": "Central heating — LPG"
                 },
                 {
                   "value": "electric",
@@ -200,7 +210,7 @@
                 },
                 {
                   "value": "mixed",
-                  "label": "Mixed — please describe"
+                  "label": "Mixed / other — please describe"
                 }
               ],
               "level": "site"
@@ -224,6 +234,21 @@
               "type": "yesno",
               "label": "Do you have a CHP (Combined Heat and Power) unit?",
               "added": true,
+              "level": "site"
+            },
+            {
+              "id": "general_chp_describe",
+              "type": "longtext",
+              "label": "Tell us a bit about the CHP",
+              "help": "Brand / model, age, output (kW), hours of operation per day, what it serves — anything that helps us judge whether it's running efficiently.",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "general_chp",
+                  "operator": "equals",
+                  "value": "yes"
+                }
+              ],
               "level": "site"
             },
             {
@@ -626,6 +651,25 @@
               "level": "building"
             },
             {
+              "id": "rooms_hvac_occupancy_what_off_describe",
+              "type": "longtext",
+              "label": "Please describe what else the occupancy sensor turns off",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "rooms_hvac_occupancy_sensors",
+                  "operator": "equals",
+                  "value": "yes"
+                },
+                {
+                  "questionId": "rooms_hvac_occupancy_what_off",
+                  "operator": "includes",
+                  "value": "other"
+                }
+              ],
+              "level": "building"
+            },
+            {
               "id": "rooms_hvac_setpoint_occupied_winter",
               "type": "number",
               "label": "Standard temperature set-point for occupied rooms — winter",
@@ -677,6 +721,10 @@
                 {
                   "value": "not_adjusted",
                   "label": "Not adjusted"
+                },
+                {
+                  "value": "unknown",
+                  "label": "Don't know"
                 }
               ],
               "level": "building"
@@ -754,7 +802,7 @@
             {
               "id": "rooms_hvac_motors_louder",
               "type": "single",
-              "label": "Have any HVAC units, fans or pumps become noticeably noisier or rougher over the last year?",
+              "label": "Have any HVAC units, fans or pumps become noticeably noisier over the last year?",
               "added": true,
               "help": "A signal that maintenance may be due — useful for predictive-maintenance scoping.",
               "options": [
@@ -832,7 +880,22 @@
             {
               "id": "rooms_hvac_towel_rails_24_7",
               "type": "yesno",
-              "label": "Are bathroom towel rails on 24/7?",
+              "label": "Are bathroom towel rails on all day?",
+              "level": "building"
+            },
+            {
+              "id": "rooms_hvac_towel_rail_hours",
+              "type": "number",
+              "label": "Approximately how many hours a day are they on for?",
+              "unit": "hours",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "rooms_hvac_towel_rails_24_7",
+                  "operator": "equals",
+                  "value": "no"
+                }
+              ],
               "level": "building"
             },
             {
@@ -1336,6 +1399,21 @@
               "level": "building"
             },
             {
+              "id": "rooms_appliances_minifridge_temp",
+              "type": "number",
+              "label": "What temperature are the mini-fridges set to?",
+              "unit": "°C",
+              "added": true,
+              "showWhen": [
+                {
+                  "questionId": "rooms_appliances_in_room",
+                  "operator": "includes",
+                  "value": "mini_fridge"
+                }
+              ],
+              "level": "building"
+            },
+            {
               "id": "rooms_appliances_tv_eco",
               "type": "yesno",
               "label": "Are TVs set to eco-mode by default?",
@@ -1755,7 +1833,7 @@
               "id": "laundry_washer_details",
               "type": "repeater",
               "label": "Details for each washing machine",
-              "help": "Please complete one section per machine. If two machines are identical you can copy the answers across.",
+              "help": "Please complete one section per machine. If two machines are identical you can copy the answers across — click 'Duplicate' on the original machine details to create a copy, or use 'Copy from previous' when adding a new one.",
               "countQuestionId": "laundry_washer_count",
               "itemNoun": "machine",
               "subQuestions": [
@@ -1902,6 +1980,7 @@
               "id": "laundry_drier_details",
               "type": "repeater",
               "label": "Details for each drier",
+              "help": "Please complete one section per drier. If two driers are identical you can copy the answers across — click 'Duplicate' on the original drier details to create a copy, or use 'Copy from previous' when adding a new one.",
               "countQuestionId": "laundry_drier_count",
               "itemNoun": "drier",
               "subQuestions": [

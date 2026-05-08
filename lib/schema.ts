@@ -93,14 +93,23 @@ export interface Section {
   groups: Group[];
 }
 
+export interface CoverPage {
+  headline: string;
+  intro: string;
+  /** Each item supports inline `**bold**` markdown. */
+  tips?: string[];
+  ctaLabel?: string;
+}
+
 export interface FormMeta {
   title: string;
   subtitle: string;
   version: string;
   scope: string;
-  estimatedMinutes: number;
+  estimatedMinutes?: number; // optional in v0.4 — Penny removed the time estimate
   submitButtonLabel: string;
   completionMessage: string;
+  coverPage?: CoverPage;
 }
 
 export interface FormSpec {

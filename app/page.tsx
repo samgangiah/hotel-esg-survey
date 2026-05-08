@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Wizard } from "@/components/form/Wizard";
+import { HomeRouter } from "@/components/form/HomeRouter";
 import { formSpec } from "@/lib/form-data";
 
 export default function HomePage() {
@@ -15,15 +15,13 @@ export default function HomePage() {
               <p className="font-display text-lg leading-tight text-ink">
                 {formSpec.meta.title}
               </p>
-              <p className="text-xs text-muted">
-                {formSpec.meta.subtitle} · ~{formSpec.meta.estimatedMinutes} min
-              </p>
+              <p className="text-xs text-muted">{formSpec.meta.subtitle}</p>
             </div>
           </div>
         </div>
       </header>
       <Suspense fallback={null}>
-        <Wizard />
+        <HomeRouter />
       </Suspense>
     </div>
   );

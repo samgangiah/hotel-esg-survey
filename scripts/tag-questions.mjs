@@ -74,8 +74,8 @@ for (const section of json.sections) {
   }
 }
 
-json.meta.version = "0.3";
+json.meta.version = "0.4";
 
 writeFileSync(PATH, JSON.stringify(json, null, 2) + "\n", "utf8");
 console.log(`Tagged ${questionCount} questions across ${json.sections.length} sections.`);
-console.log("Bumped meta.version to 0.3.");
+console.log("Bumped meta.version to 0.4.");
