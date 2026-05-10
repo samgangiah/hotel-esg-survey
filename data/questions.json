@@ -8,12 +8,37 @@
     "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll come back to you within five working days with an opportunity report.",
     "coverPage": {
       "headline": "Welcome to the Hotel Energy & ESG Survey",
-      "intro": "Thank you for taking the time to fill this in. The answers will help us spot where energy is being wasted at your property and what changes are likely to pay back the fastest. There are no wrong answers and nothing is required — anything you can give us is useful.",
+      "intro": [
+        "Thank you for taking the time to fill this in. The purpose of the survey is to understand your energy consumption and savings opportunities across two areas of the hotel: Guest Rooms and Laundry.",
+        "Please answer the questions as best as you can."
+      ],
+      "pointersHeading": "A few pointers",
       "tips": [
-        "**Different people can answer different sections.** Each invitee sees only the section relevant to them. Use 'Submit this section' when you've finished your part — someone else can pick up the next.",
-        "**Save and come back later.** 'Save for later' on any page keeps your progress on this device. Use the same link in your email to pick up where you left off.",
-        "**Estimates are fine.** Where you don't have an exact figure, your best guess is more useful than a blank.",
-        "**Photos help.** Where the form asks for an upload — energy bills, EPC, machine data plates — clear phone photos are completely fine."
+        {
+          "body": "**Different people can answer different sections.** You can respond to the section that is relevant to you. On the next page there is a panel on the left. You can use this to go straight to your section. Press 'Submit this section' when you've finished your part. Someone else can pick up the next."
+        },
+        {
+          "body": "**Save and come back later.** 'Save for later' on any page keeps your progress on this device. Use the same link in your email to pick up where you left off."
+        },
+        {
+          "body": "**Estimates are fine.** Where you don't have an exact figure, your best guess is more useful than a blank."
+        },
+        {
+          "body": "**Photos help.** The survey asks for photos if you can provide them so it may be useful to take these in advance and have them ready on your desktop:",
+          "items": [
+            "Latest electricity and gas bills (ideally last 12 months, but anything recent will be good to see)",
+            "EPC certificate",
+            "Close-up photos of each washing machine (including of the data plates)",
+            "Close-up photos of each drier (including of the data plates)"
+          ]
+        },
+        {
+          "body": "**Laptop / desktop is best.** Completing the survey on a laptop or desktop is best."
+        }
+      ],
+      "footer": [
+        "If you are having any issues with the survey, please contact xxx and we will get back to you quickly.",
+        "This is part of a pilot study and we'd appreciate any feedback. If you feel there are questions missing or there are ways in which we can improve the survey, please send us an email. At the end of the process we would also like to invite you to a feedback session."
       ],
       "ctaLabel": "Begin the survey"
     }

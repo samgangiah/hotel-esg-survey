@@ -93,11 +93,26 @@ export interface Section {
   groups: Group[];
 }
 
+export interface CoverTip {
+  /** Bullet body. Supports inline `**bold**` markdown. */
+  body: string;
+  /** Optional nested sub-bullets (rendered indented). */
+  items?: string[];
+}
+
 export interface CoverPage {
   headline: string;
-  intro: string;
-  /** Each item supports inline `**bold**` markdown. */
-  tips?: string[];
+  /** Either a single paragraph or an array of paragraphs. */
+  intro: string | string[];
+  /** Heading for the tips block (default: "A few pointers"). */
+  pointersHeading?: string;
+  /**
+   * Tips. Each entry is either a string (treated as { body }) or a CoverTip
+   * with optional nested `items[]`.
+   */
+  tips?: Array<string | CoverTip>;
+  /** Footer paragraphs rendered below the CTA, separated by a divider. */
+  footer?: string | string[];
   ctaLabel?: string;
 }
 
