@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import type { Section } from "@/lib/schema";
+import type { FormSpec, Section } from "@/lib/schema";
 import { SectionNav } from "./SectionNav";
 
 export function MobileNav({
   section,
   currentSectionId,
   currentGroupId,
+  spec,
+  basePath,
 }: {
   section: Section;
   currentSectionId: string;
   currentGroupId: string;
+  spec?: FormSpec;
+  basePath?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -48,6 +52,8 @@ export function MobileNav({
             <SectionNav
               currentSectionId={currentSectionId}
               currentGroupId={currentGroupId}
+              spec={spec}
+              basePath={basePath}
             />
           </div>
         </div>

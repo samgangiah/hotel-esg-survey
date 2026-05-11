@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { useFormStore } from "@/lib/store";
+import { useFormBackend } from "./state-context";
 import { formSpec } from "@/lib/form-data";
 import { isQuestionVisible } from "@/lib/conditions";
 import type {
@@ -22,7 +22,7 @@ export function Review() {
   const router = useRouter();
   const params = useSearchParams();
   const showAdded = params.get("showAdded") === "true";
-  const answers = useFormStore((s) => s.answers);
+  const { answers } = useFormBackend();
 
   const onSubmit = () => {
     const qs = new URLSearchParams();

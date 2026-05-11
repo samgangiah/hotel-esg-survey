@@ -4,24 +4,22 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Circle, CircleCheck, CircleDot, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFormStore } from "@/lib/store";
-import { formSpec } from "@/lib/form-data";
-import type { Group, Section } from "@/lib/schema";
+import { formSpec as defaultFormSpec } from "@/lib/form-data";
+import type { FormSpec, Group, Section } from "@/lib/schema";
+import { useFormBackend } from "./state-context";
 
-/**
- * v0.4 nav: titled "Contents" in a card. Each section is labelled
- * "Section 1: …" and the section header itself jumps to the section's first
- * group. Every group is still clickable, free cross-section navigation.
- */
 export function SectionNav({
   currentSectionId,
   currentGroupId,
+  spec = defaultFormSpec,
+  basePath = "/",
 }: {
   currentSectionId: string;
   currentGroupId: string;
+  spec?: FormSpec;
+  basePath?: string;
 }) {
-  const answers = useFormStore((s) => s.answers);
-  const submittedSections = useFormStore((s) => s.submittedSections);
+  const { answers, submittedSections } = useFormBackend();
   const params = useSearchParams();
   const showAdded = params.get("showAdded") === "true";
 
@@ -35,10 +33,10 @@ export function SectionNav({
       </div>
 
       <div className="space-y-4">
-        {formSpec.sections.map((s, i) => {
+        {spec.sections.map((s, i) => {
           const isCurrent = s.id === currentSectionId;
           const isSubmitted = !!submittedSections[s.id];
-          const sectionHref = buildHref(s, s.groups[0], showAdded);
+          const sectionHref = buildHref(s, s.groups[0], basePath, showAdded);
           return (
             <div key={s.id} className="space-y-1.5">
               <Link
@@ -70,7 +68,7 @@ export function SectionNav({
                   const hasAny = groupHasAnswer(g, answers);
                   const isCurrentGroup =
                     g.id === currentGroupId && s.id === currentSectionId;
-                  const href = buildHref(s, g, showAdded);
+                  const href = buildHref(s, g, basePath, showAdded);
                   return (
                     <li key={g.id}>
                       <Link
@@ -103,12 +101,12 @@ export function SectionNav({
   );
 }
 
-function buildHref(s: Section, g: Group, showAdded: boolean): string {
+function buildHref(s: Section, g: Group, basePath: string, showAdded: boolean): string {
   const qs = new URLSearchParams();
   qs.set("section", s.id);
   qs.set("group", g.id);
   if (showAdded) qs.set("showAdded", "true");
-  return `/?${qs.toString()}`;
+  return `${basePath}?${qs.toString()}`;
 }
 
 function groupHasAnswer(g: Group, answers: Record<string, unknown>) {

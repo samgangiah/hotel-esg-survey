@@ -2,12 +2,15 @@
 
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formSpec } from "@/lib/form-data";
+import { formSpec as defaultFormSpec } from "@/lib/form-data";
+import type { FormSpec } from "@/lib/schema";
 
 export function ProgressStrip({
   currentSectionIndex,
+  spec = defaultFormSpec,
 }: {
   currentSectionIndex: number;
+  spec?: FormSpec;
 }) {
   return (
     <div className="border-b border-line bg-white/60 backdrop-blur">
@@ -16,7 +19,7 @@ export function ProgressStrip({
           Step
         </span>
         <ol className="flex flex-1 items-center gap-2 sm:gap-3">
-          {formSpec.sections.map((s, i) => {
+          {spec.sections.map((s, i) => {
             const state =
               i < currentSectionIndex
                 ? "done"
@@ -54,7 +57,7 @@ export function ProgressStrip({
                 >
                   {s.title}
                 </span>
-                {i < formSpec.sections.length - 1 && (
+                {i < spec.sections.length - 1 && (
                   <span
                     className={cn(
                       "h-px flex-1",

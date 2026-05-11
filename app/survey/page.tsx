@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { db } from "@/lib/db";
@@ -7,82 +8,102 @@ import { requireRespondent } from "@/lib/respondent-auth";
 export const metadata = { title: "Your survey" };
 export const dynamic = "force-dynamic";
 
-export default async function SurveyPage() {
+/**
+ * Resolves the respondent's active survey instance and redirects to
+ * /survey/[instanceId]. If there are multiple, lists them. If none, shows a
+ * friendly "no assignments yet" state.
+ */
+export default async function SurveyResolver() {
   const me = await requireRespondent();
 
   const assignments = await db.assignment.findMany({
     where: { respondentId: me.respondentId },
     include: {
       surveyInstance: { include: { site: true } },
-      building: true,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  if (assignments.length === 0) {
+  // Distinct instances the respondent has any assignment on.
+  const instanceMap = new Map<
+    string,
+    {
+      id: string;
+      siteName: string;
+      status: string;
+      assignmentCount: number;
+    }
+  >();
+  for (const a of assignments) {
+    const existing = instanceMap.get(a.surveyInstanceId);
+    if (existing) {
+      existing.assignmentCount += 1;
+    } else {
+      instanceMap.set(a.surveyInstanceId, {
+        id: a.surveyInstanceId,
+        siteName: a.surveyInstance.site.name,
+        status: a.surveyInstance.status,
+        assignmentCount: 1,
+      });
+    }
+  }
+
+  const instances = Array.from(instanceMap.values());
+
+  if (instances.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
         <Card className="space-y-3 p-8 sm:p-10">
           <h1 className="font-display text-2xl text-ink">No active surveys</h1>
           <p className="text-muted">
-            You don't have any open survey assignments right now. If this looks wrong,
-            ask your Site Admin to re-send your invitation.
+            You don&apos;t have any open survey assignments right now. If this
+            looks wrong, ask your Operator Admin to re-send your invitation.
           </p>
         </Card>
       </div>
     );
   }
 
-  // For Phase 0.D, the runner UI itself isn't wired to the DB yet —
-  // demo at / is unchanged. We show a welcome card with the user's assignments.
+  if (instances.length === 1) {
+    redirect(`/survey/${instances[0].id}`);
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
       <header className="mb-6">
-        <p className="text-xs uppercase tracking-wide text-muted">Welcome</p>
+        <p className="text-xs uppercase tracking-wide text-muted">Surveys</p>
         <h1 className="mt-1 font-display text-3xl text-ink">
           Hello, {me.name.split(" ")[0]}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          You have {assignments.length} open assignment
-          {assignments.length === 1 ? "" : "s"}.
+          You have {instances.length} active surveys. Pick one to continue.
         </p>
       </header>
-
       <Card className="divide-y divide-line">
-        {assignments.map((a) => (
-          <div
-            key={a.id}
-            className="flex flex-wrap items-baseline justify-between gap-3 px-6 py-5"
+        {instances.map((i) => (
+          <Link
+            key={i.id}
+            href={`/survey/${i.id}`}
+            className="flex flex-wrap items-baseline justify-between gap-3 px-6 py-4 transition-colors hover:bg-accent-soft/30"
           >
-            <div>
-              <p className="font-medium text-ink">{a.surveyInstance.site.name}</p>
-              <p className="text-xs text-muted">
-                Section: <span className="font-mono">{a.sectionId}</span> · Role:{" "}
-                {a.role}
-                {a.building ? ` · Building: ${a.building.name}` : null}
-              </p>
-            </div>
-            <span className="text-xs text-muted">{a.status}</span>
-          </div>
+            <span>
+              <span className="font-medium text-ink">{i.siteName}</span>
+              <span className="ml-2 text-xs text-muted">
+                {i.assignmentCount} assignment
+                {i.assignmentCount === 1 ? "" : "s"}
+              </span>
+            </span>
+            <span className="text-xs text-muted">{i.status}</span>
+          </Link>
         ))}
       </Card>
-
-      <Card className="mt-6 space-y-3 p-6">
-        <h2 className="font-display text-lg text-ink">What's next</h2>
-        <p className="text-sm text-muted">
-          The DB-backed survey runner is wired up in Phase 1. For Phase 0 the demo at{" "}
-          <Link href="/" className="underline">
-            esg.digitalrain.cloud
-          </Link>{" "}
-          is the rendering canvas — the platform plumbing on this page already
-          remembers your invitation and identity.
-        </p>
-        <div>
-          <Link href="/">
-            <Button variant="secondary">Open the survey demo</Button>
-          </Link>
-        </div>
-      </Card>
+      <p className="mt-6 text-center">
+        <Link href="/">
+          <Button variant="ghost" size="sm">
+            Back to home
+          </Button>
+        </Link>
+      </p>
     </div>
   );
 }

@@ -1,13 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Bookmark, Check, CircleCheck, Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, Bookmark, Check, CircleCheck, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { useFormStore } from "@/lib/store";
 import {
-  formSpec,
+  formSpec as defaultFormSpec,
   findGroupRef,
   getGroup,
   isLastGroup,
@@ -16,53 +15,58 @@ import {
   getAllGroups,
 } from "@/lib/form-data";
 import { isQuestionVisible } from "@/lib/conditions";
-import type { AnswerValue } from "@/lib/schema";
+import type { AnswerValue, FormSpec } from "@/lib/schema";
 import { ProgressStrip } from "./ProgressStrip";
 import { SectionNav } from "./SectionNav";
 import { MobileNav } from "./MobileNav";
 import { QuestionRenderer } from "./QuestionRenderer";
+import { useFormBackend } from "./state-context";
 
-export function Wizard() {
+interface WizardProps {
+  /** Optional override: a scope-filtered template for the respondent-mode runner. */
+  formSpec?: FormSpec;
+  /** Base path for nav (default "/" for demo; "/survey/<id>" for DB runner). */
+  basePath?: string;
+  /** Where Save-for-later sends the user (default "/saved"). */
+  savedPath?: string;
+  /** Where Review/Submit sends the user (default "/review"). */
+  reviewPath?: string;
+}
+
+export function Wizard({
+  formSpec: formSpecProp,
+  basePath = "/",
+  savedPath = "/saved",
+  reviewPath = "/review",
+}: WizardProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showAdded = searchParams.get("showAdded") === "true";
 
-  const sectionId = searchParams.get("section") ?? formSpec.sections[0].id;
+  const spec = formSpecProp ?? defaultFormSpec;
+
+  const sectionId = searchParams.get("section") ?? spec.sections[0].id;
   const sectionFallbackGroup =
-    formSpec.sections.find((s) => s.id === sectionId)?.groups[0]?.id ??
-    formSpec.sections[0].groups[0].id;
+    spec.sections.find((s) => s.id === sectionId)?.groups[0]?.id ??
+    spec.sections[0].groups[0].id;
   const groupId = searchParams.get("group") ?? sectionFallbackGroup;
 
-  const groupRef = findGroupRef(sectionId, groupId);
-  const ctx = groupRef ? getGroup(sectionId, groupId) : undefined;
+  const groupRef = findGroupRef(sectionId, groupId, spec);
+  const ctx = groupRef ? getGroup(sectionId, groupId, spec) : undefined;
 
-  const answers = useFormStore((s) => s.answers);
-  const setAnswer = useFormStore((s) => s.setAnswer);
-  const clearAnswer = useFormStore((s) => s.clearAnswer);
-  const submittedSections = useFormStore((s) => s.submittedSections);
-  const markSectionSubmitted = useFormStore((s) => s.markSectionSubmitted);
+  const {
+    answers,
+    saveState,
+    submittedSections,
+    setAnswer,
+    clearAnswer,
+    markSectionSubmitted,
+  } = useFormBackend();
 
   const visibleQuestions = useMemo(() => {
     if (!ctx) return [];
     return ctx.group.questions.filter((q) => isQuestionVisible(q, answers));
   }, [ctx, answers]);
-
-  // --- Save indicator: show "Saving…" briefly when answers change, then "Saved".
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
-    "idle"
-  );
-  // We track a key based on the answers object identity. Zustand persists to
-  // sessionStorage synchronously, so "saving" is more about UX feedback.
-  useEffect(() => {
-    if (Object.keys(answers).length === 0) return;
-    setSaveState("saving");
-    const t1 = setTimeout(() => setSaveState("saved"), 250);
-    const t2 = setTimeout(() => setSaveState("idle"), 2200);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [answers]);
 
   if (!groupRef || !ctx) {
     return <div className="p-12 text-center text-muted">Section not found.</div>;
@@ -77,7 +81,7 @@ export function Wizard() {
   const totalPagesInSection = groupsInSection.length;
 
   // Total instance pagination across all sections.
-  const allGroups = getAllGroups();
+  const allGroups = getAllGroups(spec);
   const overallIndex = allGroups.findIndex(
     (r) => r.sectionId === section.id && r.groupId === group.id
   );
@@ -102,7 +106,7 @@ export function Wizard() {
     qs.set("section", nextSectionId);
     qs.set("group", nextGroupId);
     if (showAdded) qs.set("showAdded", "true");
-    router.push(`/?${qs.toString()}`);
+    router.push(`${basePath}?${qs.toString()}`);
     if (options?.scrollTop !== false) {
       requestAnimationFrame(() =>
         window.scrollTo({ top: 0, behavior: "smooth" })
@@ -114,16 +118,16 @@ export function Wizard() {
   const isLastGroupOfSection =
     section.groups[section.groups.length - 1].id === group.id;
   const isLastSection =
-    formSpec.sections[formSpec.sections.length - 1].id === section.id;
+    spec.sections[spec.sections.length - 1].id === section.id;
 
   const onNext = () => {
-    if (isLastGroup(groupRef)) {
+    if (isLastGroup(groupRef, spec)) {
       const qs = new URLSearchParams();
       if (showAdded) qs.set("showAdded", "true");
-      router.push(`/review${qs.toString() ? `?${qs.toString()}` : ""}`);
+      router.push(`${reviewPath}${qs.toString() ? `?${qs.toString()}` : ""}`);
       return;
     }
-    const next = nextGroupRef(groupRef);
+    const next = nextGroupRef(groupRef, spec);
     if (next) navTo(next.sectionId, next.groupId);
   };
 
@@ -132,14 +136,13 @@ export function Wizard() {
     if (isLastSection) {
       const qs = new URLSearchParams();
       if (showAdded) qs.set("showAdded", "true");
-      router.push(`/review${qs.toString() ? `?${qs.toString()}` : ""}`);
+      router.push(`${reviewPath}${qs.toString() ? `?${qs.toString()}` : ""}`);
       return;
     }
     // Jump to first group of next section.
-    const sectionIdx = formSpec.sections.findIndex((s) => s.id === section.id);
-    const nextSection = formSpec.sections[sectionIdx + 1];
-    if (nextSection)
-      navTo(nextSection.id, nextSection.groups[0].id);
+    const sectionIdx = spec.sections.findIndex((s) => s.id === section.id);
+    const nextSection = spec.sections[sectionIdx + 1];
+    if (nextSection) navTo(nextSection.id, nextSection.groups[0].id);
   };
 
   const onSaveForLater = () => {
@@ -147,21 +150,29 @@ export function Wizard() {
     qs.set("section", section.id);
     qs.set("group", group.id);
     if (showAdded) qs.set("showAdded", "true");
-    router.push(`/saved?${qs.toString()}`);
+    router.push(`${savedPath}?${qs.toString()}`);
   };
 
   const onBack = () => {
-    const prev = prevGroupRef(groupRef);
+    const prev = prevGroupRef(groupRef, spec);
     if (prev) navTo(prev.sectionId, prev.groupId);
   };
 
   return (
     <div>
-      <ProgressStrip currentSectionIndex={groupRef.sectionIndex} />
+      <ProgressStrip
+        currentSectionIndex={groupRef.sectionIndex}
+        spec={spec}
+      />
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-[260px_1fr] md:py-10">
         <aside className="hidden md:block">
           <div className="sticky top-6">
-            <SectionNav currentGroupId={group.id} currentSectionId={section.id} />
+            <SectionNav
+              currentGroupId={group.id}
+              currentSectionId={section.id}
+              spec={spec}
+              basePath={basePath}
+            />
           </div>
         </aside>
 
@@ -170,12 +181,14 @@ export function Wizard() {
             section={section}
             currentSectionId={section.id}
             currentGroupId={group.id}
+            spec={spec}
+            basePath={basePath}
           />
 
           <header>
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <p className="text-xs uppercase tracking-wide text-muted">
-                Section {groupRef.sectionIndex + 1} of {formSpec.sections.length}{" "}
+                Section {groupRef.sectionIndex + 1} of {spec.sections.length}{" "}
                 · {section.title} · page {pageIndex} of {totalPagesInSection}
                 {overallIndex >= 0 && (
                   <span className="ml-2 text-muted/60">
@@ -227,7 +240,7 @@ export function Wizard() {
               <Button
                 variant="secondary"
                 onClick={onBack}
-                disabled={!prevGroupRef(groupRef)}
+                disabled={!prevGroupRef(groupRef, spec)}
               >
                 Back
               </Button>
@@ -266,20 +279,31 @@ export function Wizard() {
   );
 }
 
-function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" }) {
+function SaveIndicator({
+  state,
+}: {
+  state: "idle" | "saving" | "saved" | "error";
+}) {
   if (state === "idle") return null;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-      {state === "saving" ? (
+      {state === "saving" && (
         <>
           <Loader2 className="h-3 w-3 animate-spin" />
           Saving…
         </>
-      ) : (
+      )}
+      {state === "saved" && (
         <>
           <Check className="h-3 w-3 text-accent" />
           Saved
         </>
+      )}
+      {state === "error" && (
+        <span className="inline-flex items-center gap-1.5 text-danger">
+          <AlertCircle className="h-3 w-3" />
+          Save failed — retrying…
+        </span>
       )}
     </span>
   );

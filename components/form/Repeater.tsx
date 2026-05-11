@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { useFormStore } from "@/lib/store";
+import { useFormBackend } from "./state-context";
 import type { Question, RepeaterItem, AnswerValue } from "@/lib/schema";
 import { isQuestionVisible } from "@/lib/conditions";
 import { QuestionRenderer } from "./QuestionRenderer";
@@ -24,9 +24,7 @@ export function Repeater({
   question: Question;
   items: RepeaterItem[];
 }) {
-  const setRepeaterCount = useFormStore((s) => s.setRepeaterCount);
-  const setRepeaterItem = useFormStore((s) => s.setRepeaterItem);
-  const setAnswer = useFormStore((s) => s.setAnswer);
+  const { setAnswer } = useFormBackend();
   const noun = question.itemNoun ?? "item";
 
   const count = items.length;
@@ -53,19 +51,24 @@ export function Repeater({
     setPendingScroll(null);
   }, [pendingScroll]);
 
-  const setItem = (index: number, item: RepeaterItem) =>
-    setRepeaterItem(question.id, index, item);
+  // Persist the full items array; the parent backend handles the
+  // demo vs DB write. The optional `countQuestionId` is also kept in sync.
+  const setItems = (next: RepeaterItem[]) => {
+    setAnswer(question.id, next);
+    if (question.countQuestionId)
+      setAnswer(question.countQuestionId, next.length);
+  };
 
-  const updateCountAnswer = (n: number) => {
-    if (question.countQuestionId) setAnswer(question.countQuestionId, n);
+  const setItem = (index: number, item: RepeaterItem) => {
+    const next = items.map((it, i) => (i === index ? item : it));
+    setItems(next);
   };
 
   const add = () => {
-    const newCount = count + 1;
-    setRepeaterCount(question.id, newCount);
-    updateCountAnswer(newCount);
-    setOpenIndex(newCount - 1);
-    setPendingScroll(newCount - 1);
+    const next = [...items, {} as RepeaterItem];
+    setItems(next);
+    setOpenIndex(next.length - 1);
+    setPendingScroll(next.length - 1);
   };
 
   const addFromPrevious = () => {
@@ -73,19 +76,15 @@ export function Repeater({
     const clone: RepeaterItem = source
       ? JSON.parse(JSON.stringify(source))
       : {};
-    const newCount = count + 1;
-    setRepeaterCount(question.id, newCount);
-    setItem(newCount - 1, clone);
-    updateCountAnswer(newCount);
-    setOpenIndex(newCount - 1);
-    setPendingScroll(newCount - 1);
+    const next = [...items, clone];
+    setItems(next);
+    setOpenIndex(next.length - 1);
+    setPendingScroll(next.length - 1);
   };
 
   const remove = (i: number) => {
     const next = items.filter((_, idx) => idx !== i);
-    setRepeaterCount(question.id, next.length);
-    next.forEach((item, idx) => setItem(idx, item));
-    updateCountAnswer(next.length);
+    setItems(next);
     if (openIndex !== null && openIndex >= next.length) {
       setOpenIndex(next.length > 0 ? next.length - 1 : null);
     }
@@ -100,12 +99,10 @@ export function Repeater({
     const source = items[i];
     if (!source) return;
     const clone: RepeaterItem = JSON.parse(JSON.stringify(source));
-    const newCount = count + 1;
-    setRepeaterCount(question.id, newCount);
-    setItem(newCount - 1, clone);
-    updateCountAnswer(newCount);
-    setOpenIndex(newCount - 1);
-    setPendingScroll(newCount - 1);
+    const next = [...items, clone];
+    setItems(next);
+    setOpenIndex(next.length - 1);
+    setPendingScroll(next.length - 1);
   };
 
   if (count === 0) {
@@ -132,6 +129,7 @@ export function Repeater({
           onToggle={() => setOpenIndex(openIndex === i ? null : i)}
           onRemove={() => remove(i)}
           onDuplicate={() => duplicate(i)}
+          onItemChange={(newItem) => setItem(i, newItem)}
           registerRef={(el) => {
             if (el) cardRefs.current.set(i, el);
             else cardRefs.current.delete(i);
@@ -164,6 +162,7 @@ function RepeaterCard({
   onToggle,
   onRemove,
   onDuplicate,
+  onItemChange,
   registerRef,
 }: {
   index: number;
@@ -174,15 +173,17 @@ function RepeaterCard({
   onToggle: () => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  onItemChange: (item: RepeaterItem) => void;
   registerRef: (el: HTMLDivElement | null) => void;
 }) {
-  const setRepeaterItem = useFormStore((s) => s.setRepeaterItem);
   const noun = question.itemNoun ?? "item";
 
   const summary = useMemo(() => buildSummary(item), [item]);
 
+  // The card receives a controlled `onItemChange` from its parent so it can
+  // mutate one sub-question without coupling to the parent's storage backend.
   const setSubValue = (subId: string, v: AnswerValue) => {
-    setRepeaterItem(question.id, index, { ...item, [subId]: v });
+    onItemChange({ ...item, [subId]: v });
   };
 
   return (

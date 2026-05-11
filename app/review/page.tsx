@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Review } from "@/components/form/Review";
+import { ZustandFormBackendProvider } from "@/components/form/backends/ZustandBackend";
 import { formSpec } from "@/lib/form-data";
 
 export default function ReviewPage() {
@@ -22,7 +23,9 @@ export default function ReviewPage() {
         </div>
       </header>
       <Suspense fallback={null}>
-        <Review />
+        <ZustandFormBackendProvider>
+          <Review />
+        </ZustandFormBackendProvider>
       </Suspense>
     </div>
   );

@@ -98,13 +98,14 @@ model SurveyInstance {
   createdAt          DateTime             @default(now())
   lockedAt           DateTime?
 
-  site        Site             @relation(fields: [siteId], references: [id])
-  template    SurveyTemplate   @relation(fields: [templateId], references: [id])
-  previous    SurveyInstance?  @relation("Repeat", fields: [previousInstanceId], references: [id])
-  next        SurveyInstance[] @relation("Repeat")
-  assignments Assignment[]
-  answers     Answer[]
-  reports     Report[]
+  site               Site                @relation(fields: [siteId], references: [id])
+  template           SurveyTemplate      @relation(fields: [templateId], references: [id])
+  previous           SurveyInstance?     @relation("Repeat", fields: [previousInstanceId], references: [id])
+  next               SurveyInstance[]    @relation("Repeat")
+  assignments        Assignment[]
+  answers            Answer[]
+  reports            Report[]
+  sectionSubmissions SectionSubmission[]
 
   @@index([siteId])
   @@index([status])
@@ -126,10 +127,11 @@ model Respondent {
   createdAt       DateTime  @default(now())
   deletedAt       DateTime?
 
-  operator    Operator     @relation(fields: [operatorId], references: [id])
-  assignments Assignment[]
-  answers     Answer[]
-  sessions    Session[]
+  operator           Operator            @relation(fields: [operatorId], references: [id])
+  assignments        Assignment[]
+  answers            Answer[]
+  sessions           Session[]
+  sectionSubmissions SectionSubmission[]
 
   @@unique([operatorId, email])
   @@index([operatorId])
@@ -176,6 +178,24 @@ model Answer {
   @@unique([surveyInstanceId, questionId, buildingId])
   @@index([surveyInstanceId])
   @@index([respondentId])
+}
+
+// -----------------------------------------------------------------------------
+// Per-respondent per-section "I'm done with my part" marker.
+// -----------------------------------------------------------------------------
+
+model SectionSubmission {
+  id               String   @id @default(cuid())
+  surveyInstanceId String
+  respondentId     String
+  sectionId        String   // matches questions.json section.id
+  submittedAt      DateTime @default(now())
+
+  surveyInstance SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+  respondent     Respondent     @relation(fields: [respondentId], references: [id])
+
+  @@unique([surveyInstanceId, respondentId, sectionId])
+  @@index([surveyInstanceId])
 }
 
 // -----------------------------------------------------------------------------
