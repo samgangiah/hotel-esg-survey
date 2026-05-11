@@ -57,9 +57,16 @@ export const useFormStore = create<FormStore>()(
     }),
     {
       name: "hotel-esg-survey-demo",
+      // v0.4: localStorage (was sessionStorage) so close-tab → reopen the
+      // original link on the same device restores progress. Penny's tested
+      // scenario from 2026-05-11.
+      //
+      // True cross-device resume (open the link on your home laptop after
+      // filling in part on your work laptop) lands when the DB-backed survey
+      // runner ships in Phase 0.F.2.
       storage:
         typeof window !== "undefined"
-          ? createJSONStorage(() => sessionStorage)
+          ? createJSONStorage(() => localStorage)
           : undefined,
       // Don't persist files — they're not serialisable. We only persist scalar/array fields.
       partialize: (s) => ({
