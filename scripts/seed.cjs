@@ -13,20 +13,19 @@ const db = new PrismaClient();
   const slug = "hotel-energy";
   const version = 1;
 
-  const existing = await db.surveyTemplate.findUnique({
+  // Upsert: on Phase 0 we treat v1 of the locked schema as a living draft so
+  // cosmetic edits to the cover page / labels propagate to existing instances
+  // without inventing a v2. Once we go pilot-live with real customer data,
+  // any *structural* change (new question, removed question, new question
+  // type) MUST bump the version number to v2 + leave existing instances on v1.
+  const result = await db.surveyTemplate.upsert({
     where: { slug_version: { slug, version } },
+    update: { schemaJson: questions },
+    create: { slug, version, schemaJson: questions },
   });
-
-  if (existing) {
-    console.log(`[seed] Already seeded: ${slug} v${version}`);
-  } else {
-    await db.surveyTemplate.create({
-      data: { slug, version, schemaJson: questions },
-    });
-    console.log(
-      `[seed] Created template ${slug} v${version} (questions.json v${questions.meta.version})`
-    );
-  }
+  console.log(
+    `[seed] Upserted template ${slug} v${version} (questions.json v${questions.meta.version}) — id=${result.id}`
+  );
 
   await db.$disconnect();
 })().catch((e) => {
