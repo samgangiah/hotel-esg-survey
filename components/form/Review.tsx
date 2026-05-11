@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, PencilLine } from "lucide-react";
+import { Eye, FileText, Image as ImageIcon, PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useFormBackend } from "./state-context";
@@ -17,7 +17,10 @@ import type {
   Section,
   StoredFile,
   TableValue,
+  UploadedFileRef,
 } from "@/lib/schema";
+import { isUploadedFileRef } from "@/lib/schema";
+import { formatBytes } from "@/lib/file-format";
 
 export function Review({
   spec,
@@ -193,16 +196,41 @@ function AnswerView({
   }
 
   if (question.type === "file") {
-    const files = (value as StoredFile[] | undefined) ?? [];
+    const files = (value as (StoredFile | UploadedFileRef)[] | undefined) ?? [];
     if (files.length === 0) return <span className="text-muted">—</span>;
     return (
       <ul className="space-y-1">
-        {files.map((f, i) => (
-          <li key={i} className="flex items-center gap-2 text-sm">
-            <FileText className="h-3.5 w-3.5 text-muted" />
-            <span className="truncate">{f.name}</span>
-          </li>
-        ))}
+        {files.map((f, i) => {
+          const ref = isUploadedFileRef(f);
+          const name = ref ? f.filename : f.name;
+          const size = ref ? f.byteSize : f.size;
+          const mime = ref ? f.mimeType : f.type;
+          const isImage = mime.startsWith("image/");
+          return (
+            <li key={ref ? f.id : `${name}-${i}`} className="flex items-center gap-2 text-sm">
+              {isImage ? (
+                <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
+              ) : (
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
+              )}
+              <span className="truncate" title={name}>
+                {name}
+              </span>
+              <span className="shrink-0 text-xs text-muted">{formatBytes(size)}</span>
+              {ref && (
+                <a
+                  href={`/api/uploads/${f.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-1 inline-flex items-center gap-1 text-xs text-accent-deep hover:text-accent"
+                  title="View"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </li>
+          );
+        })}
       </ul>
     );
   }

@@ -8,6 +8,7 @@ import type {
   RepeaterItem,
   StoredFile,
   TableValue,
+  UploadedFileRef,
 } from "@/lib/schema";
 import { isQuestionVisible } from "@/lib/conditions";
 import { Pill } from "@/components/ui/Pill";
@@ -138,7 +139,8 @@ function renderInput(
     case "file":
       return (
         <FileInput
-          value={value as StoredFile[] | undefined}
+          questionId={q.id}
+          value={value as (StoredFile | UploadedFileRef)[] | undefined}
           multiple={q.multiple}
           onChange={(v) => set(v)}
         />

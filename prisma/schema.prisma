@@ -106,6 +106,7 @@ model SurveyInstance {
   answers            Answer[]
   reports            Report[]
   sectionSubmissions SectionSubmission[]
+  uploadedFiles      UploadedFile[]
 
   @@index([siteId])
   @@index([status])
@@ -132,6 +133,7 @@ model Respondent {
   answers            Answer[]
   sessions           Session[]
   sectionSubmissions SectionSubmission[]
+  uploadedFiles      UploadedFile[]
 
   @@unique([operatorId, email])
   @@index([operatorId])
@@ -196,6 +198,42 @@ model SectionSubmission {
 
   @@unique([surveyInstanceId, respondentId, sectionId])
   @@index([surveyInstanceId])
+}
+
+// -----------------------------------------------------------------------------
+// Uploaded files (energy bills, EPC certificates, machine photos, etc.)
+// Storage backend starts as 'local' (bind-mounted folder on the VPS) and can
+// migrate to 'r2' later without changing the Answer.valueJson shape.
+// -----------------------------------------------------------------------------
+
+model UploadedFile {
+  id               String    @id @default(cuid())
+  surveyInstanceId String
+  questionId       String    // matches questions.json (or sub-question id within a repeater)
+  buildingId       String    // same anchor convention as Answer
+  respondentId     String    // who uploaded
+
+  // Where, within a repeater question, this file lives. Both null for
+  // top-level questions (energy bills, EPC certificate, guest comms).
+  repeaterParentId String?
+  repeaterIndex    Int?
+
+  filename         String    // original filename for display
+  byteSize         Int
+  mimeType         String
+
+  storageBackend   String    @default("local") // 'local' | 'r2'
+  storagePath      String                      // relative path under uploads root
+
+  createdAt        DateTime  @default(now())
+  deletedAt        DateTime?                   // soft-delete; cron purges the blob later
+
+  surveyInstance SurveyInstance @relation(fields: [surveyInstanceId], references: [id])
+  respondent     Respondent     @relation(fields: [respondentId], references: [id])
+
+  @@index([surveyInstanceId])
+  @@index([surveyInstanceId, questionId, buildingId])
+  @@index([respondentId])
 }
 
 // -----------------------------------------------------------------------------

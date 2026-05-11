@@ -12,19 +12,18 @@ export interface RespondentAuth {
 
 /**
  * Resolve the active respondent from the signed cookie + DB session.
- * Server-only. Redirects to / if no valid session.
+ * Server-only. Returns null if no valid session — caller decides whether to
+ * redirect (page) or return 401 (API route).
  */
-export async function requireRespondent(): Promise<RespondentAuth> {
+export async function getRespondent(): Promise<RespondentAuth | null> {
   const sessionId = await getRespondentSessionId();
-  if (!sessionId) redirect("/");
+  if (!sessionId) return null;
 
   const session = await db.session.findUnique({
     where: { id: sessionId },
     include: { respondent: true },
   });
-  if (!session || session.expiresAt < new Date()) {
-    redirect("/");
-  }
+  if (!session || session.expiresAt < new Date()) return null;
 
   await db.session.update({
     where: { id: sessionId },
@@ -38,4 +37,13 @@ export async function requireRespondent(): Promise<RespondentAuth> {
     name: session.respondent.name,
     isOperatorAdmin: session.respondent.isOperatorAdmin,
   };
+}
+
+/**
+ * Page-friendly variant — redirects to / if no valid session.
+ */
+export async function requireRespondent(): Promise<RespondentAuth> {
+  const me = await getRespondent();
+  if (!me) redirect("/");
+  return me;
 }

@@ -10,6 +10,11 @@ services:
         condition: service_healthy
     networks:
       - tunnel-network
+    volumes:
+      # Respondent file uploads (energy bills, EPC, machine photos).
+      # Host folder must be chowned to 1001:1001 (the `nextjs` container user)
+      # so the app can write. Created during deploy.
+      - /opt/vps/data/esg-files:/app/uploads
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://esg:${POSTGRES_PASSWORD:-changeme}@esg-db:5432/esg?schema=public
@@ -19,6 +24,7 @@ services:
       - APP_URL=${APP_URL:-https://esg.digitalrain.cloud}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM=${RESEND_FROM:-}
+      - UPLOADS_DIR=${UPLOADS_DIR:-/app/uploads}
 
   esg-db:
     image: postgres:16-alpine

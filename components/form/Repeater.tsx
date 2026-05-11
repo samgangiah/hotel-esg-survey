@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { useFormBackend } from "./state-context";
+import { RepeaterScopeContext, useFormBackend } from "./state-context";
 import type { Question, RepeaterItem, AnswerValue } from "@/lib/schema";
 import { isQuestionVisible } from "@/lib/conditions";
 import { QuestionRenderer } from "./QuestionRenderer";
@@ -119,22 +119,26 @@ export function Repeater({
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
-        <RepeaterCard
+        <RepeaterScopeContext.Provider
           key={i}
-          index={i}
-          total={count}
-          item={item}
-          question={question}
-          isOpen={openIndex === i}
-          onToggle={() => setOpenIndex(openIndex === i ? null : i)}
-          onRemove={() => remove(i)}
-          onDuplicate={() => duplicate(i)}
-          onItemChange={(newItem) => setItem(i, newItem)}
-          registerRef={(el) => {
-            if (el) cardRefs.current.set(i, el);
-            else cardRefs.current.delete(i);
-          }}
-        />
+          value={{ parentQuestionId: question.id, index: i }}
+        >
+          <RepeaterCard
+            index={i}
+            total={count}
+            item={item}
+            question={question}
+            isOpen={openIndex === i}
+            onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+            onRemove={() => remove(i)}
+            onDuplicate={() => duplicate(i)}
+            onItemChange={(newItem) => setItem(i, newItem)}
+            registerRef={(el) => {
+              if (el) cardRefs.current.set(i, el);
+              else cardRefs.current.delete(i);
+            }}
+          />
+        </RepeaterScopeContext.Provider>
       ))}
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={add}>

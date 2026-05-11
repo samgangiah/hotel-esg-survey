@@ -10,10 +10,8 @@ export const dynamic = "force-dynamic";
  *
  * Returns everything we hold for this operator across sites, buildings,
  * respondents, instances, assignments, invitations, answers, section
- * submissions, recent email events, and recent audit-log entries.
- *
- * Files (energy bills, EPC certs, photos) are referenced by metadata only —
- * actual binary content isn't uploaded yet (Phase 0.G adds R2-backed uploads).
+ * submissions, recent email events, recent audit-log entries, and an inventory
+ * of uploaded files per instance (with their /api/uploads/:id URLs).
  */
 export async function GET(
   _req: Request,
@@ -36,6 +34,11 @@ export async function GET(
               assignments: { include: { respondent: true, building: true } },
               sectionSubmissions: { include: { respondent: true } },
               reports: true,
+              uploadedFiles: {
+                where: { deletedAt: null },
+                include: { respondent: true },
+                orderBy: { createdAt: "asc" },
+              },
             },
           },
         },
@@ -156,6 +159,25 @@ export async function GET(
           status: r.status,
           generatedAt: r.generatedAt,
           pdfPath: r.pdfPath,
+        })),
+        uploadedFiles: i.uploadedFiles.map((f) => ({
+          id: f.id,
+          questionId: f.questionId,
+          repeaterParentId: f.repeaterParentId,
+          repeaterIndex: f.repeaterIndex,
+          buildingId: f.buildingId,
+          respondent: {
+            id: f.respondent.id,
+            email: f.respondent.email,
+            name: f.respondent.name,
+          },
+          filename: f.filename,
+          byteSize: f.byteSize,
+          mimeType: f.mimeType,
+          storageBackend: f.storageBackend,
+          storagePath: f.storagePath,
+          downloadUrl: `/api/uploads/${f.id}`,
+          createdAt: f.createdAt,
         })),
       })),
     })),

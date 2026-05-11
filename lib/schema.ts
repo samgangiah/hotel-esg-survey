@@ -132,7 +132,23 @@ export interface FormSpec {
   sections: Section[];
 }
 
-// Holds a file's metadata only — actual File object kept in browser memory keyed by question path.
+/**
+ * Metadata for an uploaded file, stored on the server.
+ * `id` is the row id in UploadedFile; the bytes live under
+ * `$UPLOADS_DIR/<operatorId>/<instanceId>/<questionId>/<id>.<ext>`.
+ *
+ * The demo (Zustand) still uses the legacy `StoredFile` shape — it never
+ * actually persists bytes — and the real survey runner uses this shape.
+ * Both are valid answer values for `type: "file"` questions.
+ */
+export interface UploadedFileRef {
+  id: string;
+  filename: string;
+  byteSize: number;
+  mimeType: string;
+}
+
+/** Legacy in-memory file marker used only by the unauthenticated demo. */
 export interface StoredFile {
   name: string;
   size: number;
@@ -145,6 +161,8 @@ export type AnswerValue =
   | boolean
   | string[]
   | StoredFile[]
+  | UploadedFileRef[]
+  | Array<StoredFile | UploadedFileRef>
   | RepeaterItem[]
   | TableValue
   | null
@@ -153,3 +171,10 @@ export type AnswerValue =
 export type RepeaterItem = Record<string, AnswerValue>;
 
 export type Answers = Record<string, AnswerValue>;
+
+/** Discriminate UploadedFileRef from legacy StoredFile by the `id` field. */
+export function isUploadedFileRef(
+  v: UploadedFileRef | StoredFile
+): v is UploadedFileRef {
+  return typeof (v as UploadedFileRef).id === "string";
+}

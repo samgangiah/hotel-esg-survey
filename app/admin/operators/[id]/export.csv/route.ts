@@ -173,12 +173,30 @@ function stringifyValue(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "string") return v;
   if (typeof v === "number" || typeof v === "boolean") return String(v);
-  // arrays, objects (table values, repeater items, file metadata) → JSON
+
+  // UploadedFileRef[] → render as `filename (id, NN KB); ...` for readability.
+  if (Array.isArray(v) && v.length > 0 && isUploadedFileRefRow(v[0])) {
+    return (v as Array<{ id: string; filename: string; byteSize: number }>)
+      .map((f) => `${f.filename} (${f.id}, ${Math.ceil(f.byteSize / 1024)} KB)`)
+      .join("; ");
+  }
+
+  // arrays, objects (table values, repeater items, etc.) → JSON
   try {
     return JSON.stringify(v);
   } catch {
     return String(v);
   }
+}
+
+function isUploadedFileRefRow(x: unknown): boolean {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    typeof (x as { id?: unknown }).id === "string" &&
+    typeof (x as { filename?: unknown }).filename === "string" &&
+    typeof (x as { byteSize?: unknown }).byteSize === "number"
+  );
 }
 
 function escapeCsv(cell: string): string {

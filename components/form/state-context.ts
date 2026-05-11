@@ -20,6 +20,11 @@ export interface FormBackend {
   saveState: SaveState;
   /** Whether the storage is persistent across devices (DB) or local-only. */
   mode: "demo" | "db";
+  /**
+   * SurveyInstance id for DB mode (needed by file uploads). Null in demo mode
+   * — the FileInput renders an offline-only stub when null.
+   */
+  instanceId: string | null;
 
   setAnswer: (id: string, value: AnswerValue) => void;
   clearAnswer: (id: string) => void;
@@ -37,4 +42,21 @@ export function useFormBackend(): FormBackend {
     );
   }
   return ctx;
+}
+
+/**
+ * Scope context for sub-questions rendered inside a repeater item.
+ * FileInput consumes this so a file uploaded inside repeater item N records
+ * `repeaterParentId` + `repeaterIndex` against the server-side row.
+ * Outside a repeater this context is absent (default null).
+ */
+export interface RepeaterScope {
+  parentQuestionId: string;
+  index: number;
+}
+
+export const RepeaterScopeContext = createContext<RepeaterScope | null>(null);
+
+export function useRepeaterScope(): RepeaterScope | null {
+  return useContext(RepeaterScopeContext);
 }
