@@ -49,14 +49,15 @@ export default async function SurveyInstancePage({
     formSpec;
 
   // Compute respondent's scope + filter the template down to what they can see.
+  // `isOperatorAdmin` is the only thing that unlocks every section; the
+  // `sectionId === "all"` value on Assignment rows is just a sentinel we use
+  // until per-section assignments are first-class — it is NOT a permission.
   const scope = computeScope({
     assignments: instance.assignments.map((a) => ({
       role: a.role,
       buildingId: a.buildingId,
     })),
-    isOperatorAdmin:
-      me.isOperatorAdmin ||
-      instance.assignments.some((a) => a.sectionId === "all"),
+    isOperatorAdmin: me.isOperatorAdmin,
   });
   const scopedSpec = visibleSpec(lockedSpec, scope);
 
