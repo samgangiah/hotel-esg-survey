@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { ArrowRight, Bookmark, Check, CircleCheck, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Bookmark, Check, CircleCheck, ClipboardList, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import {
@@ -132,14 +132,23 @@ export function Wizard({
   };
 
   const onSubmitSection = () => {
+    // If this section was already submitted before, this Submit click is the
+    // end of an "Edit from review" round-trip — bounce back to review so
+    // they don't have to scroll-through-everything to get there.
+    // (Penny's call feedback, 2026-05-11.)
+    const wasAlreadySubmitted = !!submittedSections[section.id];
+
     markSectionSubmitted(section.id);
-    if (isLastSection) {
-      const qs = new URLSearchParams();
-      if (showAdded) qs.set("showAdded", "true");
-      router.push(`${reviewPath}${qs.toString() ? `?${qs.toString()}` : ""}`);
+
+    const qsReview = new URLSearchParams();
+    if (showAdded) qsReview.set("showAdded", "true");
+    const reviewHref = `${reviewPath}${qsReview.toString() ? `?${qsReview.toString()}` : ""}`;
+
+    if (wasAlreadySubmitted || isLastSection) {
+      router.push(reviewHref);
       return;
     }
-    // Jump to first group of next section.
+    // First-time submit: jump to first group of next section.
     const sectionIdx = spec.sections.findIndex((s) => s.id === section.id);
     const nextSection = spec.sections[sectionIdx + 1];
     if (nextSection) navTo(nextSection.id, nextSection.groups[0].id);
@@ -151,6 +160,12 @@ export function Wizard({
     qs.set("group", group.id);
     if (showAdded) qs.set("showAdded", "true");
     router.push(`${savedPath}?${qs.toString()}`);
+  };
+
+  const onReviewAnswers = () => {
+    const qs = new URLSearchParams();
+    if (showAdded) qs.set("showAdded", "true");
+    router.push(`${reviewPath}${qs.toString() ? `?${qs.toString()}` : ""}`);
   };
 
   const onBack = () => {
@@ -247,6 +262,10 @@ export function Wizard({
               <Button variant="ghost" onClick={onSaveForLater}>
                 <Bookmark className="h-4 w-4" />
                 Save for later
+              </Button>
+              <Button variant="ghost" onClick={onReviewAnswers}>
+                <ClipboardList className="h-4 w-4" />
+                Review answers
               </Button>
             </div>
             {isLastGroupOfSection ? (

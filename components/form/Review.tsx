@@ -6,11 +6,12 @@ import { FileText, PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useFormBackend } from "./state-context";
-import { formSpec } from "@/lib/form-data";
+import { formSpec as defaultFormSpec } from "@/lib/form-data";
 import { isQuestionVisible } from "@/lib/conditions";
 import type {
   Answers,
   AnswerValue,
+  FormSpec,
   Question,
   RepeaterItem,
   Section,
@@ -18,16 +19,27 @@ import type {
   TableValue,
 } from "@/lib/schema";
 
-export function Review() {
+export function Review({
+  spec,
+  basePath = "/",
+  donePath = "/done",
+}: {
+  spec?: FormSpec;
+  /** Base path the wizard lives at — used for Edit + Back links. */
+  basePath?: string;
+  /** Path the Submit button on Review navigates to. */
+  donePath?: string;
+} = {}) {
   const router = useRouter();
   const params = useSearchParams();
   const showAdded = params.get("showAdded") === "true";
   const { answers } = useFormBackend();
+  const activeSpec = spec ?? defaultFormSpec;
 
   const onSubmit = () => {
     const qs = new URLSearchParams();
     if (showAdded) qs.set("showAdded", "true");
-    router.push(`/done${qs.toString() ? `?${qs.toString()}` : ""}`);
+    router.push(`${donePath}${qs.toString() ? `?${qs.toString()}` : ""}`);
   };
 
   return (
@@ -40,25 +52,27 @@ export function Review() {
           Almost done — please review
         </h1>
         <p className="mt-3 text-muted">
-          Have a quick scan over what you've told us. You can jump back to any
-          section to edit.
+          Have a quick scan over what you've told us. Click <em>Edit</em> next
+          to any section to make a change — your edits save automatically and
+          one more click on <em>Submit this section</em> brings you back here.
         </p>
       </div>
 
       <div className="space-y-8">
-        {formSpec.sections.map((section) => (
+        {activeSpec.sections.map((section) => (
           <SectionReview
             key={section.id}
             section={section}
             answers={answers}
             showAdded={showAdded}
+            basePath={basePath}
           />
         ))}
       </div>
 
       <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
-          href={`/?${showAdded ? "showAdded=true" : ""}`}
+          href={`${basePath}${showAdded ? "?showAdded=true" : ""}`}
           className="text-sm text-muted underline-offset-2 hover:text-ink hover:underline"
         >
           ← Back to the form
@@ -75,12 +89,14 @@ function SectionReview({
   section,
   answers,
   showAdded,
+  basePath,
 }: {
   section: Section;
   answers: Answers;
   showAdded: boolean;
+  basePath: string;
 }) {
-  const editHref = `/?section=${section.id}&group=${section.groups[0].id}${showAdded ? "&showAdded=true" : ""}`;
+  const editHref = `${basePath}?section=${section.id}&group=${section.groups[0].id}${showAdded ? "&showAdded=true" : ""}`;
 
   return (
     <section>
