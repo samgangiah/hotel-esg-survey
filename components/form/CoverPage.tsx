@@ -10,23 +10,34 @@ import type { CoverTip } from "@/lib/schema";
 /**
  * Cover page rendered as the first thing a respondent sees. Editable from the
  * form spec (`meta.coverPage`) so Penny can update copy without code.
+ *
+ * The basePath defaults to `/` (demo). The DB-backed survey at
+ * /survey/[instanceId] passes its own basePath so "Begin the survey" stays
+ * inside the per-respondent route.
  */
-export function CoverPage() {
+export function CoverPage({
+  basePath = "/",
+  spec,
+}: {
+  basePath?: string;
+  spec?: typeof formSpec;
+} = {}) {
   const router = useRouter();
   const params = useSearchParams();
-  const cover = formSpec.meta.coverPage;
+  const activeSpec = spec ?? formSpec;
+  const cover = activeSpec.meta.coverPage;
   if (!cover) return null;
 
   const showAdded = params.get("showAdded") === "true";
 
   const begin = () => {
-    const firstSection = formSpec.sections[0];
+    const firstSection = activeSpec.sections[0];
     const firstGroup = firstSection.groups[0];
     const qs = new URLSearchParams();
     qs.set("section", firstSection.id);
     qs.set("group", firstGroup.id);
     if (showAdded) qs.set("showAdded", "true");
-    router.push(`/?${qs.toString()}`);
+    router.push(`${basePath}?${qs.toString()}`);
   };
 
   const intros = Array.isArray(cover.intro) ? cover.intro : [cover.intro];

@@ -68,7 +68,7 @@ export function DbSurveyShell({
       >
         <Suspense fallback={null}>
           {showCoverByDefault ? (
-            <CoverPage />
+            <CoverPage basePath={`/survey/${instanceId}`} spec={spec} />
           ) : (
             <Wizard
               formSpec={spec}
