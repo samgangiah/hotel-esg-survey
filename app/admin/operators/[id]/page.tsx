@@ -6,6 +6,9 @@ import {
   Send,
   CircleAlert,
   CircleCheck,
+  Download,
+  FileSpreadsheet,
+  FileJson,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -96,6 +99,30 @@ export default async function OperatorDetailPage({
               {operator.respondents.length === 1 ? "" : "s"} · {totalAssignments}{" "}
               assignment{totalAssignments === 1 ? "" : "s"}
             </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/admin/operators/${operator.id}/export.csv`}
+              download
+              title="Long-format CSV of every answer"
+            >
+              <Button variant="secondary" size="sm">
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <Download className="h-3 w-3" />
+                Answers (CSV)
+              </Button>
+            </a>
+            <a
+              href={`/admin/operators/${operator.id}/export.json`}
+              download
+              title="Full operator dump: sites, buildings, respondents, instances, answers, submissions, email events, audit log"
+            >
+              <Button variant="secondary" size="sm">
+                <FileJson className="h-3.5 w-3.5" />
+                <Download className="h-3 w-3" />
+                Full dump (JSON)
+              </Button>
+            </a>
           </div>
         </header>
 
