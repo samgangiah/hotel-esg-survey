@@ -12,10 +12,12 @@ import { Button } from "@/components/ui/Button";
 import { Pill } from "@/components/ui/Pill";
 import { OperatorNav } from "@/components/operator/OperatorNav";
 import { CloseSurveyButton } from "@/components/operator/CloseSurveyButton";
+import { GenerateReportButton } from "@/components/operator/GenerateReportButton";
 import { db } from "@/lib/db";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 import { ROLE_LABELS, type RoleKey } from "@/lib/roles";
 import { closeInstance, reopenInstance } from "./actions";
+import { generateReport } from "./reports/actions";
 
 export const metadata = { title: "Operator dashboard" };
 export const dynamic = "force-dynamic";
@@ -119,12 +121,18 @@ export default async function OperatorDashboard() {
                       </p>
                     </div>
                     {inst && (
-                      <CloseSurveyButton
-                        instanceId={inst.id}
-                        status={inst.status}
-                        onClose={closeInstance}
-                        onReopen={reopenInstance}
-                      />
+                      <div className="flex flex-col items-end gap-2">
+                        <GenerateReportButton
+                          instanceId={inst.id}
+                          onGenerate={generateReport}
+                        />
+                        <CloseSurveyButton
+                          instanceId={inst.id}
+                          status={inst.status}
+                          onClose={closeInstance}
+                          onReopen={reopenInstance}
+                        />
+                      </div>
                     )}
                   </div>
                   {s.buildings.length > 0 && (

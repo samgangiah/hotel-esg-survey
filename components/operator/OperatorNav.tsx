@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, BarChart3, Pencil } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, FileText, Pencil } from "lucide-react";
 
 const NAV = [
   { href: "/operator", label: "Dashboard", icon: LayoutDashboard },
   { href: "/operator/team", label: "Team", icon: Users },
   { href: "/operator/progress", label: "Progress", icon: BarChart3 },
+  { href: "/operator/reports", label: "Reports", icon: FileText },
   { href: "/survey", label: "Open the survey", icon: Pencil },
 ];
 
