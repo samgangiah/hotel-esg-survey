@@ -63,3 +63,69 @@ export async function resendInvitation(
 
   return { ok: true };
 }
+
+/**
+ * Platform-admin override: close (lock) a SurveyInstance regardless of which
+ * operator owns it. Mirrors `/operator` closeInstance but bypasses the
+ * Operator-Admin gate — used when the operator is unresponsive but the
+ * survey window has expired.
+ */
+export async function adminCloseInstance(
+  instanceId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requirePlatformAdmin();
+
+  const instance = await db.surveyInstance.findUnique({
+    where: { id: instanceId },
+  });
+  if (!instance) return { ok: false, error: "Survey not found." };
+  if (instance.status === "submitted" || instance.status === "locked") {
+    return { ok: false, error: "Survey is already closed." };
+  }
+
+  await db.surveyInstance.update({
+    where: { id: instanceId },
+    data: { status: "submitted", lockedAt: new Date() },
+  });
+
+  await audit({
+    actorType: "platform_admin",
+    actorId: me.platformAdminId,
+    action: "instance.submitted",
+    targetType: "SurveyInstance",
+    targetId: instanceId,
+    payload: { closedBy: "platform_admin", siteId: instance.siteId },
+  });
+
+  return { ok: true };
+}
+
+export async function adminReopenInstance(
+  instanceId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requirePlatformAdmin();
+
+  const instance = await db.surveyInstance.findUnique({
+    where: { id: instanceId },
+  });
+  if (!instance) return { ok: false, error: "Survey not found." };
+  if (instance.status !== "submitted" && instance.status !== "locked") {
+    return { ok: false, error: "Survey isn't closed." };
+  }
+
+  await db.surveyInstance.update({
+    where: { id: instanceId },
+    data: { status: "in_progress", lockedAt: null },
+  });
+
+  await audit({
+    actorType: "platform_admin",
+    actorId: me.platformAdminId,
+    action: "instance.reopened",
+    targetType: "SurveyInstance",
+    targetId: instanceId,
+    payload: { reopenedBy: "platform_admin", siteId: instance.siteId },
+  });
+
+  return { ok: true };
+}

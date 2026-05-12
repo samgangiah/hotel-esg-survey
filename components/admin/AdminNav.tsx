@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Inbox, ListChecks, Building2 } from "lucide-react";
+import { Inbox, ListChecks, Building2, Bell } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Operators", icon: Building2 },
+  { href: "/admin/reminders", label: "Reminders", icon: Bell },
   { href: "/admin/email-events", label: "Email events", icon: Inbox },
   { href: "/admin/audit", label: "Audit log", icon: ListChecks },
 ];

@@ -38,17 +38,19 @@ export default async function EmailEventsPage() {
             Deliverability feed
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Every delivered, bounced, opened, complained, and failed event from
-            the email provider's webhooks. Empty until Resend is wired (Phase
-            0.D real-send swap).
+            Every delivered, bounced, opened, complained, and failed event
+            posted by Resend to <code>/api/webhooks/resend</code>. Hard
+            bounces and complaints auto-flag the respondent as{" "}
+            <em>email invalid</em>, so the reminder cron stops nudging them.
           </p>
         </header>
 
         {events.length === 0 ? (
           <Card className="px-6 py-10 text-center text-sm text-muted">
-            No email events yet — the mailer is currently in stub mode (links
-            logged to <code>docker logs esg-app</code>). Once Resend is wired,
-            its webhook will write rows here as they arrive.
+            No email events yet. If Resend should be posting here, check
+            that <code>RESEND_WEBHOOK_SECRET</code> is set and that the
+            dashboard webhook points at{" "}
+            <code>https://esg.digitalrain.cloud/api/webhooks/resend</code>.
           </Card>
         ) : (
           <Card className="divide-y divide-line">

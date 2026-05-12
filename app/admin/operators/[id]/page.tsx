@@ -9,6 +9,7 @@ import {
   Download,
   FileSpreadsheet,
   FileJson,
+  FolderOpen,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +17,13 @@ import { Pill } from "@/components/ui/Pill";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/admin-auth";
-import { resendInvitation } from "./actions";
+import { CloseSurveyButton } from "@/components/operator/CloseSurveyButton";
+import { RespondentControls } from "@/components/admin/RespondentControls";
+import { resendInvitation, adminCloseInstance, adminReopenInstance } from "./actions";
+import {
+  softDeleteRespondent,
+  undeleteRespondent,
+} from "@/app/admin/respondents/[id]/actions";
 
 export const metadata = { title: "Operator" };
 export const dynamic = "force-dynamic";
@@ -45,8 +52,8 @@ export default async function OperatorDetailPage({
           },
         },
       },
+      // Include soft-deleted respondents so the admin can see + restore them.
       respondents: {
-        where: { deletedAt: null },
         orderBy: [{ isOperatorAdmin: "desc" }, { createdAt: "asc" }],
         include: {
           assignments: {
@@ -101,6 +108,15 @@ export default async function OperatorDetailPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/admin/operators/${operator.id}/files`}
+              title="Inventory of every uploaded file for this operator"
+            >
+              <Button variant="secondary" size="sm">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Files
+              </Button>
+            </Link>
             <a
               href={`/admin/operators/${operator.id}/export.csv`}
               download
@@ -140,20 +156,41 @@ export default async function OperatorDetailPage({
               const inst = s.surveyInstances[0];
               return (
                 <div key={s.id} className="px-6 py-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-ink">{s.name}</p>
                       {s.address && (
                         <p className="text-xs text-muted">{s.address}</p>
                       )}
+                      <p className="mt-1 text-xs text-muted">
+                        {s.buildings.length} building
+                        {s.buildings.length === 1 ? "" : "s"}
+                        {inst ? (
+                          <>
+                            {" · status: "}
+                            <span className="font-medium text-ink">
+                              {inst.status}
+                            </span>
+                            {inst.lockedAt && (
+                              <span>
+                                {" · closed "}
+                                {inst.lockedAt.toISOString().slice(0, 10)}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span> · no instance</span>
+                        )}
+                      </p>
                     </div>
-                    <span className="text-xs text-muted">
-                      {s.buildings.length} building
-                      {s.buildings.length === 1 ? "" : "s"} ·{" "}
-                      {inst
-                        ? `instance: ${inst.status}`
-                        : "no instance"}
-                    </span>
+                    {inst && (
+                      <CloseSurveyButton
+                        instanceId={inst.id}
+                        status={inst.status}
+                        onClose={adminCloseInstance}
+                        onReopen={adminReopenInstance}
+                      />
+                    )}
                   </div>
                   {s.buildings.length > 0 && (
                     <p className="mt-2 text-xs text-muted">
@@ -176,9 +213,15 @@ export default async function OperatorDetailPage({
             <Card className="divide-y divide-line">
               {operator.respondents.map((r) => {
                 const lastSession = r.sessions[0];
+                const isDeleted = r.deletedAt !== null;
                 return (
-                  <div key={r.id} className="px-6 py-4">
-                    <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <div
+                    key={r.id}
+                    className={
+                      "px-6 py-4" + (isDeleted ? " opacity-60" : "")
+                    }
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-baseline gap-2">
                           <p className="font-medium text-ink">{r.name}</p>
@@ -203,6 +246,12 @@ export default async function OperatorDetailPage({
                           )}
                         </p>
                       </div>
+                      <RespondentControls
+                        respondentId={r.id}
+                        isDeleted={isDeleted}
+                        onDelete={softDeleteRespondent}
+                        onUndelete={undeleteRespondent}
+                      />
                     </div>
 
                     {r.assignments.length > 0 && (
