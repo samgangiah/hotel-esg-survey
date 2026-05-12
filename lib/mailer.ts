@@ -18,6 +18,14 @@ interface InvitationEmail {
   roleLabel: string;
 }
 
+interface RecoveryEmail {
+  to: string;
+  toName: string;
+  magicLink: string;
+  siteName: string;
+  roleLabel: string;
+}
+
 const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
 
 function getFrom(): string {
@@ -145,6 +153,73 @@ function invitationHtml(args: InvitationEmail) {
         Your link is personal to you and bound to the first device that opens it.
         You can save your progress at any point and come back through the same
         link.
+      </p>
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
+        Thanks,<br/>Hotel Energy &amp; ESG Survey team
+      </p>
+    `,
+  });
+}
+
+// --- Self-service recovery (lost-link replacement) -------------------------
+
+export async function sendRecoveryEmail(args: RecoveryEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Recovery link — ${args.siteName}`));
+    console.log(`To:    ${args.toName} <${args.to}>`);
+    console.log(`Role:  ${args.roleLabel}`);
+    console.log(`Link:  ${args.magicLink}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Your fresh survey link for ${args.siteName}`,
+    text: recoveryText(args),
+    html: recoveryHtml(args),
+  });
+}
+
+function recoveryText(args: RecoveryEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `You asked for a fresh link for the energy survey at ${args.siteName}.`,
+    "",
+    `Your section: ${args.roleLabel}`,
+    "",
+    "Open the survey with your new link below. The old link is now invalid.",
+    args.magicLink,
+    "",
+    "This link is one-time-use and will bind to whichever device you open it on first. If you didn't request this, you can safely ignore this email.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function recoveryHtml(args: RecoveryEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `A fresh survey link for ${args.siteName}. Your old link is now invalid.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        Hi ${escapeHtml(firstName)},
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        You asked for a fresh link for the energy survey at
+        <strong>${escapeHtml(args.siteName)}</strong>. Your old link is now invalid.
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 20px">
+        Your section: <strong>${escapeHtml(args.roleLabel)}</strong>
+      </p>
+      ${ctaButton(args.magicLink, "Open my survey")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 8px">
+        This link is personal to you and will bind to the first device you open it on.
+        If you didn't request this, you can safely ignore this email.
       </p>
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
         Thanks,<br/>Hotel Energy &amp; ESG Survey team
