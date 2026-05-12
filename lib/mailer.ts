@@ -26,6 +26,15 @@ interface RecoveryEmail {
   roleLabel: string;
 }
 
+interface ReminderEmail {
+  to: string;
+  toName: string;
+  magicLink: string;
+  siteName: string;
+  roleLabel: string;
+  tier: 1 | 2 | 3;
+}
+
 const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
 
 function getFrom(): string {
@@ -223,6 +232,99 @@ function recoveryHtml(args: RecoveryEmail) {
       </p>
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
         Thanks,<br/>Hotel Energy &amp; ESG Survey team
+      </p>
+    `,
+  });
+}
+
+// --- Auto-reminders (5/10/21-day cadence) ----------------------------------
+
+const REMINDER_SUBJECTS: Record<1 | 2 | 3, string> = {
+  1: "A quick nudge on your energy survey",
+  2: "Could you spare 30 minutes for the energy survey?",
+  3: "Final reminder — energy survey closing soon",
+};
+
+export async function sendReminderEmail(args: ReminderEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Reminder tier ${args.tier} — ${args.siteName}`));
+    console.log(`To:    ${args.toName} <${args.to}>`);
+    console.log(`Role:  ${args.roleLabel}`);
+    console.log(`Link:  ${args.magicLink}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: REMINDER_SUBJECTS[args.tier],
+    text: reminderText(args),
+    html: reminderHtml(args),
+  });
+}
+
+function reminderBodyText(tier: 1 | 2 | 3, siteName: string): string {
+  switch (tier) {
+    case 1:
+      return `Just a friendly nudge — your energy survey for ${siteName} is still waiting on your input. It should only take about 30 minutes, and your answers help your operator find quick efficiency wins.`;
+    case 2:
+      return `Your energy survey for ${siteName} hasn't been completed yet. Could you find 30 minutes this week? The data you provide is the foundation of the savings report your team will receive.`;
+    case 3:
+      return `This is the final reminder for the energy survey at ${siteName}. The survey window is closing soon. If you can't complete it personally, please pass this link to someone on your team who can.`;
+  }
+}
+
+function reminderBodyHtml(tier: 1 | 2 | 3, siteName: string): string {
+  const safe = escapeHtml(siteName);
+  switch (tier) {
+    case 1:
+      return `Just a friendly nudge — your energy survey for <strong>${safe}</strong> is still waiting on your input. It should only take about 30 minutes, and your answers help your operator find quick efficiency wins.`;
+    case 2:
+      return `Your energy survey for <strong>${safe}</strong> hasn't been completed yet. Could you find 30 minutes this week? The data you provide is the foundation of the savings report your team will receive.`;
+    case 3:
+      return `This is the <strong>final reminder</strong> for the energy survey at <strong>${safe}</strong>. The survey window is closing soon. If you can't complete it personally, please pass this link to someone on your team who can.`;
+  }
+}
+
+function reminderText(args: ReminderEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    reminderBodyText(args.tier, args.siteName),
+    "",
+    `Your section: ${args.roleLabel}`,
+    "",
+    "Pick up where you left off:",
+    args.magicLink,
+    "",
+    "Your progress is saved automatically. Click the link any time on the device you've been using.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function reminderHtml(args: ReminderEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  const ctaLabel = args.tier === 3 ? "Open the survey now" : "Open my survey";
+  return baseHtml({
+    preheader: REMINDER_SUBJECTS[args.tier],
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        Hi ${escapeHtml(firstName)},
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        ${reminderBodyHtml(args.tier, args.siteName)}
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 20px">
+        Your section: <strong>${escapeHtml(args.roleLabel)}</strong>
+      </p>
+      ${ctaButton(args.magicLink, ctaLabel)}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 0">
+        Your progress is saved automatically. Click the link any time on the
+        device you've been using.
       </p>
     `,
   });

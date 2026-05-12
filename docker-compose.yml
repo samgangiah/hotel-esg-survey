@@ -25,6 +25,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM=${RESEND_FROM:-}
       - UPLOADS_DIR=${UPLOADS_DIR:-/app/uploads}
+      - CRON_SECRET=${CRON_SECRET:-}
 
   esg-db:
     image: postgres:16-alpine

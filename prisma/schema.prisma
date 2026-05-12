@@ -249,6 +249,12 @@ model Invitation {
   boundSessionId String?   @unique
   expiresAt      DateTime
 
+  // Reminder cadence — auto-reminders fire at 5/10/21 days after sentAt.
+  // `remindersSent` is a running count (0..3), `lastReminderAt` blocks
+  // multiple reminders within a 24-hour window if cron fires more than once.
+  remindersSent  Int       @default(0)
+  lastReminderAt DateTime?
+
   assignment   Assignment   @relation(fields: [assignmentId], references: [id])
   boundSession Session?     @relation("InvitationBinding", fields: [boundSessionId], references: [id])
   emailEvents  EmailEvent[]

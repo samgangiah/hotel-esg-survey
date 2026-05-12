@@ -17,10 +17,11 @@ export const dynamic = "force-dynamic";
 export default async function RecoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string }>;
+  searchParams: Promise<{ sent?: string; email?: string }>;
 }) {
   const sp = await searchParams;
   const sent = sp.sent === "1";
+  const prefillEmail = typeof sp.email === "string" ? sp.email : "";
 
   async function submit(formData: FormData) {
     "use server";
@@ -73,6 +74,7 @@ export default async function RecoverPage({
                 name="email"
                 required
                 autoFocus
+                defaultValue={prefillEmail}
                 placeholder="you@example.com"
               />
             </div>
