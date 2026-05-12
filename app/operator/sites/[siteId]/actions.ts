@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 
+const PLACEHOLDER_SITE_NAME = "Your first hotel";
+
 export async function updateSite(
   siteId: string,
   args: { name: string; address: string | null }
@@ -13,13 +15,38 @@ export async function updateSite(
 
   const site = await db.site.findFirst({
     where: { id: siteId, operatorId: me.operatorId, deletedAt: null },
+    include: { operator: true },
   });
   if (!site) return { ok: false, error: "Site not found." };
+
+  const wasPlaceholder = site.name === PLACEHOLDER_SITE_NAME;
+  const isStillPlaceholder = args.name === PLACEHOLDER_SITE_NAME;
 
   await db.site.update({
     where: { id: siteId },
     data: { name: args.name, address: args.address },
   });
+
+  // If the customer renames away from the placeholder, that's also the
+  // signal that they're done with the first-run setup wizard.
+  if (
+    wasPlaceholder &&
+    !isStillPlaceholder &&
+    site.operator.setupCompletedAt === null
+  ) {
+    await db.operator.update({
+      where: { id: site.operatorId },
+      data: { setupCompletedAt: new Date() },
+    });
+    await audit({
+      actorType: "respondent",
+      actorId: me.respondentId,
+      action: "operator.setupCompleted",
+      targetType: "Operator",
+      targetId: site.operatorId,
+      payload: { trigger: "site.renamed" },
+    });
+  }
 
   await audit({
     actorType: "respondent",

@@ -5,6 +5,55 @@ import { audit } from "@/lib/audit";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 
 /**
+ * Customer renames their operator (company name). Available from /operator
+ * so they can fix it if the SaaS admin typed it wrong during onboarding.
+ */
+export async function updateOperatorName(
+  rawName: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireOperatorAdmin();
+  const name = rawName.trim();
+  if (!name) return { ok: false, error: "Name can't be empty." };
+  if (name.length > 200) return { ok: false, error: "Name is too long." };
+
+  await db.operator.update({
+    where: { id: me.operatorId },
+    data: { name },
+  });
+  await audit({
+    actorType: "respondent",
+    actorId: me.respondentId,
+    action: "operator.renamed",
+    targetType: "Operator",
+    targetId: me.operatorId,
+    payload: { newName: name },
+  });
+  return { ok: true };
+}
+
+/**
+ * Customer dismisses the setup wizard. Called automatically when they
+ * rename their first site (the wizard's primary action) — also exposed as
+ * a "Mark setup complete" button so a returning customer can dismiss it
+ * even if the placeholder site is somehow still around.
+ */
+export async function completeSetup(): Promise<{ ok: true }> {
+  const me = await requireOperatorAdmin();
+  await db.operator.update({
+    where: { id: me.operatorId },
+    data: { setupCompletedAt: new Date() },
+  });
+  await audit({
+    actorType: "respondent",
+    actorId: me.respondentId,
+    action: "operator.setupCompleted",
+    targetType: "Operator",
+    targetId: me.operatorId,
+  });
+  return { ok: true };
+}
+
+/**
  * Close (lock) a SurveyInstance — the Operator Admin's "we're done" button.
  *
  * After this, saveAnswer / submitSection / file uploads / file deletes are all

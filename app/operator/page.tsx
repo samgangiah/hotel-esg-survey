@@ -13,11 +13,14 @@ import { Pill } from "@/components/ui/Pill";
 import { OperatorNav } from "@/components/operator/OperatorNav";
 import { CloseSurveyButton } from "@/components/operator/CloseSurveyButton";
 import { GenerateReportButton } from "@/components/operator/GenerateReportButton";
+import { SetupWizard } from "@/components/operator/SetupWizard";
+import { EditOperatorName } from "@/components/operator/EditOperatorName";
 import { db } from "@/lib/db";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 import { ROLE_LABELS, type RoleKey } from "@/lib/roles";
-import { closeInstance, reopenInstance } from "./actions";
+import { closeInstance, reopenInstance, updateOperatorName } from "./actions";
 import { generateReport } from "./reports/actions";
+import { updateSite, addBuilding } from "./sites/[siteId]/actions";
 
 export const metadata = { title: "Operator dashboard" };
 export const dynamic = "force-dynamic";
@@ -58,6 +61,39 @@ export default async function OperatorDashboard() {
     0
   );
 
+  // First-run setup wizard: shown when the customer hasn't yet renamed
+  // their placeholder hotel. The dashboard takes over once they do.
+  if (operator.setupCompletedAt === null) {
+    const firstSite = operator.sites[0];
+    if (firstSite) {
+      const firstInstance = firstSite.surveyInstances[0];
+      return (
+        <>
+          <OperatorNav active="/operator" operatorName={me.operatorName} />
+          <SetupWizard
+            operatorName={me.operatorName}
+            respondentName={me.name}
+            site={{
+              id: firstSite.id,
+              name: firstSite.name,
+              address: firstSite.address,
+              buildings: firstSite.buildings.map((b) => ({
+                id: b.id,
+                name: b.name,
+                isPrimary: b.id === firstSite.primaryBuildingId,
+              })),
+            }}
+            surveyInstanceId={firstInstance?.id ?? ""}
+            teamCount={operator.respondents.length}
+            onSaveSite={updateSite}
+            onAddBuilding={addBuilding}
+            onRenameOperator={updateOperatorName}
+          />
+        </>
+      );
+    }
+  }
+
   return (
     <>
       <OperatorNav active="/operator" operatorName={me.operatorName} />
@@ -69,8 +105,11 @@ export default async function OperatorDashboard() {
           </h1>
           <p className="mt-1 text-sm text-muted">
             You're managing the energy survey for{" "}
-            <span className="font-medium text-ink">{me.operatorName}</span>.{" "}
-            {operator.sites.length} site{operator.sites.length === 1 ? "" : "s"}{" "}
+            <EditOperatorName
+              currentName={me.operatorName}
+              onSave={updateOperatorName}
+            />
+            . {operator.sites.length} site{operator.sites.length === 1 ? "" : "s"}{" "}
             · {totalBuildings} building{totalBuildings === 1 ? "" : "s"} ·{" "}
             {operator.respondents.length} respondent
             {operator.respondents.length === 1 ? "" : "s"}.

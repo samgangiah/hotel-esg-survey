@@ -23,6 +23,10 @@ model Operator {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
+  // Set when the customer has finished the first-run setup wizard
+  // (named their first hotel etc). Null = show the wizard on /operator.
+  setupCompletedAt DateTime?
+
   sites       Site[]
   respondents Respondent[]
 }

@@ -35,6 +35,14 @@ interface ReminderEmail {
   tier: 1 | 2 | 3;
 }
 
+interface WelcomeEmail {
+  to: string;
+  toName: string;
+  magicLink: string;
+  operatorName: string;
+  inviterName: string;
+}
+
 const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
 
 function getFrom(): string {
@@ -232,6 +240,92 @@ function recoveryHtml(args: RecoveryEmail) {
       </p>
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
         Thanks,<br/>Hotel Energy &amp; ESG Survey team
+      </p>
+    `,
+  });
+}
+
+// --- Welcome email (first-time Operator Admin from /admin) -----------------
+
+export async function sendWelcomeEmail(args: WelcomeEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Welcome — ${args.operatorName}`));
+    console.log(`To:    ${args.toName} <${args.to}>`);
+    console.log(`Link:  ${args.magicLink}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Welcome to the Hotel Energy & ESG Survey — set up ${args.operatorName}`,
+    text: welcomeText(args),
+    html: welcomeHtml(args),
+  });
+}
+
+function welcomeText(args: WelcomeEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `${args.inviterName} has set up an account for ${args.operatorName} on the Hotel Energy & ESG Survey platform.`,
+    "",
+    "You're the Operator Admin — the person who'll add your hotel(s), invite your team, and run the survey.",
+    "",
+    "Click the link below to sign in. The first time you land in your portal, we'll walk you through a 2-minute setup:",
+    "  1. Name your hotel and add its address",
+    "  2. List your buildings",
+    "  3. Invite the people on your team who'll fill different sections",
+    "  4. Open the survey",
+    "",
+    args.magicLink,
+    "",
+    "The link is one-time-use and binds to whichever device you first open it on. Save your progress at any point and come back through the same link.",
+    "",
+    "Any questions, just reply to this email.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function welcomeHtml(args: WelcomeEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `Your Operator Admin account for ${args.operatorName} is ready.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        Hi ${escapeHtml(firstName)},
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.inviterName)}</strong> has set up an account
+        for <strong>${escapeHtml(args.operatorName)}</strong> on the Hotel
+        Energy &amp; ESG Survey platform.
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        You're the Operator Admin — the person who'll add your hotel(s),
+        invite your team, and run the survey.
+      </p>
+      <p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 8px">
+        Click below to sign in. The first time you land in your portal, we'll
+        walk you through a 2-minute setup:
+      </p>
+      <ol style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 20px;padding-left:20px">
+        <li>Name your hotel and add its address</li>
+        <li>List your buildings</li>
+        <li>Invite the people on your team</li>
+        <li>Open the survey</li>
+      </ol>
+      ${ctaButton(args.magicLink, "Sign in and set up my hotel")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 8px">
+        Your link is personal to you and binds to the first device you open
+        it on. You can save your progress at any point and come back through
+        the same link.
+      </p>
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
+        Any questions, just reply to this email.<br/>Hotel Energy &amp; ESG
+        Survey team
       </p>
     `,
   });
