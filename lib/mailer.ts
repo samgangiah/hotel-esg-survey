@@ -62,6 +62,56 @@ interface DelegationCompletedEmail {
   surveyUrl: string;
 }
 
+interface SectionSubmittedEmail {
+  to: string;             // Operator Admin
+  toName: string;
+  submitterName: string;
+  sectionTitle: string;
+  siteName: string;
+  progressUrl: string;
+}
+
+interface AllSectionsCompleteEmail {
+  to: string;             // Operator Admin
+  toName: string;
+  siteName: string;
+  operatorName: string;
+  reviewUrl: string;
+}
+
+interface SurveyClosedEmail {
+  to: string;
+  toName: string;
+  siteName: string;
+  closedByName: string;
+  reviewUrl: string;
+}
+
+interface SurveyReopenedEmail {
+  to: string;
+  toName: string;
+  siteName: string;
+  reopenedByName: string;
+  surveyUrl: string;
+}
+
+interface DelegationCancelledEmail {
+  to: string;             // the delegate
+  toName: string | null;
+  delegatorName: string;
+  questionLabel: string;
+  siteName: string;
+}
+
+interface BounceAlertEmail {
+  to: string;             // the operator admin (or platform admin)
+  toName: string;
+  bouncedEmail: string;
+  bouncedRespondentName: string;
+  operatorName: string;
+  teamUrl: string | null;
+}
+
 const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
 
 function getFrom(): string {
@@ -573,6 +623,331 @@ function delegationCompletedHtml(args: DelegationCompletedEmail) {
         ${escapeHtml(args.questionLabel)}
       </blockquote>
       ${ctaButton(args.surveyUrl, "See their answer")}
+    `,
+  });
+}
+
+// --- Progress events: section submitted, all sections complete ------------
+
+export async function sendSectionSubmittedEmail(args: SectionSubmittedEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Section submitted — ${args.siteName}`));
+    console.log(`To:        ${args.toName} <${args.to}>`);
+    console.log(`Submitter: ${args.submitterName}`);
+    console.log(`Section:   ${args.sectionTitle}`);
+    console.log(`Progress:  ${args.progressUrl}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `${args.submitterName} submitted: ${args.sectionTitle} — ${args.siteName}`,
+    text: sectionSubmittedText(args),
+    html: sectionSubmittedHtml(args),
+  });
+}
+
+function sectionSubmittedText(args: SectionSubmittedEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `${args.submitterName} has just submitted the "${args.sectionTitle}" section of the energy survey for ${args.siteName}.`,
+    "",
+    "See where the rest of your team is up to:",
+    args.progressUrl,
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function sectionSubmittedHtml(args: SectionSubmittedEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `${args.submitterName} submitted ${args.sectionTitle}.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.submitterName)}</strong> has just submitted the
+        <strong>${escapeHtml(args.sectionTitle)}</strong> section of the energy survey
+        for <strong>${escapeHtml(args.siteName)}</strong>.
+      </p>
+      ${ctaButton(args.progressUrl, "See team progress")}
+    `,
+  });
+}
+
+export async function sendAllSectionsCompleteEmail(args: AllSectionsCompleteEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`All sections complete — ${args.siteName}`));
+    console.log(`To:     ${args.toName} <${args.to}>`);
+    console.log(`Review: ${args.reviewUrl}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Your team has finished the energy survey for ${args.siteName}`,
+    text: allSectionsCompleteText(args),
+    html: allSectionsCompleteHtml(args),
+  });
+}
+
+function allSectionsCompleteText(args: AllSectionsCompleteEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `Every section of the energy survey for ${args.siteName} has now been submitted by your team.`,
+    "",
+    "Review what they sent, generate a report, and close the survey when you're happy:",
+    args.reviewUrl,
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function allSectionsCompleteHtml(args: AllSectionsCompleteEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `Every section of the survey for ${args.siteName} is now submitted.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        🎉 Every section of the energy survey for
+        <strong>${escapeHtml(args.siteName)}</strong> has now been submitted by your team.
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 20px">
+        From here, you can review what they sent, generate a report, and close
+        the survey when you're satisfied.
+      </p>
+      ${ctaButton(args.reviewUrl, "Review and finalise")}
+    `,
+  });
+}
+
+// --- Survey lifecycle: closed, reopened ------------------------------------
+
+export async function sendSurveyClosedEmail(args: SurveyClosedEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Survey closed — ${args.siteName}`));
+    console.log(`To:     ${args.toName} <${args.to}>`);
+    console.log(`Closed: by ${args.closedByName}`);
+    console.log(`Review: ${args.reviewUrl}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Energy survey for ${args.siteName} is now closed`,
+    text: surveyClosedText(args),
+    html: surveyClosedHtml(args),
+  });
+}
+
+function surveyClosedText(args: SurveyClosedEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `The energy survey for ${args.siteName} has been closed by ${args.closedByName}.`,
+    "",
+    "Your answers have been saved. You can still review them through your original link:",
+    args.reviewUrl,
+    "",
+    "If you think it was closed too soon, ask your Operator Admin to reopen it.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function surveyClosedHtml(args: SurveyClosedEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `The energy survey for ${args.siteName} has been closed.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        The energy survey for <strong>${escapeHtml(args.siteName)}</strong> has been
+        closed by <strong>${escapeHtml(args.closedByName)}</strong>.
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 20px">
+        Your answers have been saved. You can still review them through your
+        original link.
+      </p>
+      ${ctaButton(args.reviewUrl, "Review my answers")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 0">
+        If you think it was closed too soon, ask your Operator Admin to reopen it.
+      </p>
+    `,
+  });
+}
+
+export async function sendSurveyReopenedEmail(args: SurveyReopenedEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Survey reopened — ${args.siteName}`));
+    console.log(`To:       ${args.toName} <${args.to}>`);
+    console.log(`Reopened: by ${args.reopenedByName}`);
+    console.log(`Survey:   ${args.surveyUrl}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Energy survey for ${args.siteName} is open again`,
+    text: surveyReopenedText(args),
+    html: surveyReopenedHtml(args),
+  });
+}
+
+function surveyReopenedText(args: SurveyReopenedEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `${args.reopenedByName} has reopened the energy survey for ${args.siteName}.`,
+    "",
+    "You can return through your original link to make edits:",
+    args.surveyUrl,
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function surveyReopenedHtml(args: SurveyReopenedEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `${args.reopenedByName} reopened the survey for ${args.siteName}.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.reopenedByName)}</strong> has reopened the energy
+        survey for <strong>${escapeHtml(args.siteName)}</strong>. You can return to
+        make edits.
+      </p>
+      ${ctaButton(args.surveyUrl, "Open the survey")}
+    `,
+  });
+}
+
+// --- Delegation cancelled --------------------------------------------------
+
+export async function sendDelegationCancelledEmail(args: DelegationCancelledEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Delegation cancelled — ${args.siteName}`));
+    console.log(`To:       ${args.toName ?? "(no name)"} <${args.to}>`);
+    console.log(`Question: ${args.questionLabel}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `${args.delegatorName} no longer needs your input on that question`,
+    text: delegationCancelledText(args),
+    html: delegationCancelledHtml(args),
+  });
+}
+
+function delegationCancelledText(args: DelegationCancelledEmail) {
+  const greet = args.toName ? `Hi ${args.toName.split(" ")[0]}` : "Hi";
+  return [
+    `${greet},`,
+    "",
+    `${args.delegatorName} has withdrawn the question they sent you earlier for ${args.siteName}:`,
+    "",
+    `  "${args.questionLabel}"`,
+    "",
+    "No action is needed from you. The link you received is no longer active.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function delegationCancelledHtml(args: DelegationCancelledEmail) {
+  const greet = args.toName
+    ? `Hi ${escapeHtml(args.toName.split(" ")[0])}`
+    : "Hi";
+  return baseHtml({
+    preheader: `${args.delegatorName} no longer needs your input on that question.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">${greet},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.delegatorName)}</strong> has withdrawn the
+        question they sent you earlier for
+        <strong>${escapeHtml(args.siteName)}</strong>:
+      </p>
+      <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #999;background:#f4f1e6;font:500 15px/1.45 system-ui,-apple-system,sans-serif;color:#1f2421">
+        ${escapeHtml(args.questionLabel)}
+      </blockquote>
+      <p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 0">
+        No action is needed from you. The link you received is no longer active.
+      </p>
+    `,
+  });
+}
+
+// --- Bounce alert (Resend webhook) ----------------------------------------
+
+export async function sendBounceAlertEmail(args: BounceAlertEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Bounce alert — ${args.operatorName}`));
+    console.log(`To:       ${args.toName} <${args.to}>`);
+    console.log(`Bounced:  ${args.bouncedRespondentName} <${args.bouncedEmail}>`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `Email to ${args.bouncedEmail} is bouncing`,
+    text: bounceAlertText(args),
+    html: bounceAlertHtml(args),
+  });
+}
+
+function bounceAlertText(args: BounceAlertEmail) {
+  return [
+    `Hi ${args.toName.split(" ")[0] || args.toName},`,
+    "",
+    `Email to ${args.bouncedRespondentName} <${args.bouncedEmail}> is bouncing.`,
+    "",
+    "The platform has stopped sending reminders and invitations to that address. To restore contact, ask them for a fresh email address and re-invite them.",
+    args.teamUrl ? `\n  ${args.teamUrl}\n` : "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+}
+
+function bounceAlertHtml(args: BounceAlertEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `Email to ${args.bouncedEmail} is bouncing — reminders are paused.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        Email to <strong>${escapeHtml(args.bouncedRespondentName)}</strong>
+        &lt;${escapeHtml(args.bouncedEmail)}&gt; is bouncing.
+      </p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        The platform has stopped sending reminders and invitations to that
+        address. To restore contact, ask them for a fresh email address and
+        re-invite them through your team page.
+      </p>
+      ${args.teamUrl ? ctaButton(args.teamUrl, "Open team management") : ""}
     `,
   });
 }

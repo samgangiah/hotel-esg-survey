@@ -4,7 +4,10 @@ import { db } from "@/lib/db";
 import { newToken } from "@/lib/auth/tokens";
 import { audit } from "@/lib/audit";
 import { requireRespondent } from "@/lib/respondent-auth";
-import { sendDelegationEmail } from "@/lib/mailer";
+import {
+  sendDelegationEmail,
+  sendDelegationCancelledEmail,
+} from "@/lib/mailer";
 import { DELEGATION_TTL_MS, findQuestionContext } from "@/lib/delegation";
 import type { FormSpec } from "@/lib/schema";
 
@@ -176,6 +179,31 @@ export async function cancelDelegation(
       targetType: "QuestionDelegation",
       targetId: delegationId,
     });
+
+    // Notify the delegate that their link is no longer needed. Best-effort.
+    try {
+      const instance = await db.surveyInstance.findUnique({
+        where: { id: delegation.surveyInstanceId },
+        include: { template: true, site: true },
+      });
+      if (instance) {
+        const spec = instance.template.schemaJson as unknown as FormSpec;
+        const ctx = findQuestionContext(spec, delegation.questionId);
+        if (ctx) {
+          await sendDelegationCancelledEmail({
+            to: delegation.delegatedToEmail,
+            toName: delegation.delegatedToName,
+            delegatorName: me.name,
+            questionLabel: ctx.question.label,
+            siteName: instance.site.name,
+          });
+        }
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[sendDelegationCancelledEmail]", e);
+    }
+
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed." };

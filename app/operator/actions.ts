@@ -3,6 +3,10 @@
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
+import {
+  notifyOnInstanceClosed,
+  notifyOnInstanceReopened,
+} from "@/lib/notifications";
 
 /**
  * Customer renames their operator (company name). Available from /operator
@@ -94,6 +98,17 @@ export async function closeInstance(
     payload: { closedBy: "operator_admin", siteId: instance.siteId },
   });
 
+  try {
+    await notifyOnInstanceClosed({
+      instanceId,
+      closedByName: me.name,
+      closerRespondentId: me.respondentId,
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[notifyOnInstanceClosed]", e);
+  }
+
   return { ok: true };
 }
 
@@ -133,5 +148,17 @@ export async function reopenInstance(
     payload: { reopenedBy: "operator_admin", siteId: instance.siteId },
   });
 
+  try {
+    await notifyOnInstanceReopened({
+      instanceId,
+      reopenedByName: me.name,
+      reopenerRespondentId: me.respondentId,
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[notifyOnInstanceReopened]", e);
+  }
+
   return { ok: true };
 }
+

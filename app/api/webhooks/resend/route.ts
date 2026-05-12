@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { sendBounceAlertEmail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,6 +138,40 @@ export async function POST(req: NextRequest) {
           targetId: r.id,
           payload: { reason: eventType, email: r.email },
         });
+
+        // Tell the Operator Admin(s) of this respondent's operator so they
+        // can ask the affected colleague for a fresh email address and
+        // re-invite them. Skip notifying the bounced respondent themselves
+        // (no point — their inbox is dead) and skip operator admins whose
+        // own email is also invalid.
+        try {
+          const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+          const operator = await db.operator.findUnique({
+            where: { id: r.operatorId },
+          });
+          const operatorAdmins = await db.respondent.findMany({
+            where: {
+              operatorId: r.operatorId,
+              isOperatorAdmin: true,
+              deletedAt: null,
+              emailInvalid: false,
+              id: { not: r.id },
+            },
+          });
+          for (const oa of operatorAdmins) {
+            await sendBounceAlertEmail({
+              to: oa.email,
+              toName: oa.name,
+              bouncedEmail: r.email,
+              bouncedRespondentName: r.name,
+              operatorName: operator?.name ?? "your operator",
+              teamUrl: `${appUrl}/operator/team`,
+            });
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error("[sendBounceAlertEmail]", e);
+        }
       }
     }
   }

@@ -3,7 +3,11 @@
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireRespondent } from "@/lib/respondent-auth";
-import type { AnswerValue } from "@/lib/schema";
+import {
+  sendSectionSubmittedEmail,
+  sendAllSectionsCompleteEmail,
+} from "@/lib/mailer";
+import type { AnswerValue, FormSpec } from "@/lib/schema";
 
 /**
  * Verify the active respondent has an assignment to this instance, and resolve
@@ -146,12 +150,115 @@ export async function submitSection(args: {
       payload: { sectionId: args.sectionId },
     });
 
+    // Fire and forget — notify Operator Admins. Wrapped in try/catch so an
+    // email-provider failure can't prevent the submission from being saved.
+    try {
+      await notifyOnSectionSubmitted({
+        instanceId: instance.id,
+        sectionId: args.sectionId,
+        submitterRespondentId: me.respondentId,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[notifyOnSectionSubmitted]", e);
+    }
+
     return { ok: true };
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "submit failed",
     };
+  }
+}
+
+/**
+ * After a section is submitted, notify the Operator Admin(s):
+ *   - one "X submitted [section]" email per Operator Admin (skip the submitter
+ *     themselves if they're also the OA)
+ *   - if every section in the locked template now has at least one
+ *     SectionSubmission, also send the "all sections complete" email
+ *
+ * Errors here never block the actual section submission — call site already
+ * wraps in try/catch.
+ */
+async function notifyOnSectionSubmitted(args: {
+  instanceId: string;
+  sectionId: string;
+  submitterRespondentId: string;
+}) {
+  const instance = await db.surveyInstance.findUnique({
+    where: { id: args.instanceId },
+    include: {
+      template: true,
+      site: { include: { operator: true } },
+      sectionSubmissions: true,
+    },
+  });
+  if (!instance) return;
+
+  const submitter = await db.respondent.findUnique({
+    where: { id: args.submitterRespondentId },
+  });
+  if (!submitter) return;
+
+  const spec = instance.template.schemaJson as unknown as FormSpec;
+  const sectionTitle =
+    spec.sections.find((s) => s.id === args.sectionId)?.title ?? args.sectionId;
+
+  // Operator Admins to notify (excluding the submitter themselves).
+  const operatorAdmins = await db.respondent.findMany({
+    where: {
+      operatorId: instance.site.operatorId,
+      isOperatorAdmin: true,
+      deletedAt: null,
+      emailInvalid: false,
+      id: { not: args.submitterRespondentId },
+    },
+  });
+
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  for (const oa of operatorAdmins) {
+    await sendSectionSubmittedEmail({
+      to: oa.email,
+      toName: oa.name,
+      submitterName: submitter.name,
+      sectionTitle,
+      siteName: instance.site.name,
+      progressUrl: `${appUrl}/operator/progress`,
+    });
+  }
+
+  // All sections complete? Count distinct section ids in submissions and
+  // compare to the template's section count.
+  const submittedSectionIds = new Set(
+    instance.sectionSubmissions.map((s) => s.sectionId)
+  );
+  const expectedSectionIds = new Set(spec.sections.map((s) => s.id));
+  // Add the one we just submitted (the include above was captured pre-write
+  // in this transaction window — handle that explicitly).
+  submittedSectionIds.add(args.sectionId);
+
+  const allComplete =
+    expectedSectionIds.size > 0 &&
+    Array.from(expectedSectionIds).every((id) => submittedSectionIds.has(id));
+
+  if (allComplete) {
+    await audit({
+      actorType: "system",
+      action: "instance.allSectionsComplete",
+      targetType: "SurveyInstance",
+      targetId: instance.id,
+    });
+    for (const oa of operatorAdmins) {
+      await sendAllSectionsCompleteEmail({
+        to: oa.email,
+        toName: oa.name,
+        siteName: instance.site.name,
+        operatorName: instance.site.operator.name,
+        reviewUrl: `${appUrl}/survey/${instance.id}/review`,
+      });
+    }
   }
 }
 

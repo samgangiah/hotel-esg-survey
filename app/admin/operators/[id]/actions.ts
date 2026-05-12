@@ -3,6 +3,10 @@
 import { db } from "@/lib/db";
 import { newToken } from "@/lib/auth/tokens";
 import { sendInvitationEmail } from "@/lib/mailer";
+import {
+  notifyOnInstanceClosed,
+  notifyOnInstanceReopened,
+} from "@/lib/notifications";
 import { audit } from "@/lib/audit";
 import { requirePlatformAdmin } from "@/lib/admin-auth";
 
@@ -97,6 +101,17 @@ export async function adminCloseInstance(
     payload: { closedBy: "platform_admin", siteId: instance.siteId },
   });
 
+  try {
+    await notifyOnInstanceClosed({
+      instanceId,
+      closedByName: `${me.name} (Platform Admin)`,
+      closerRespondentId: null, // not a respondent — notify everyone
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[notifyOnInstanceClosed]", e);
+  }
+
   return { ok: true };
 }
 
@@ -126,6 +141,17 @@ export async function adminReopenInstance(
     targetId: instanceId,
     payload: { reopenedBy: "platform_admin", siteId: instance.siteId },
   });
+
+  try {
+    await notifyOnInstanceReopened({
+      instanceId,
+      reopenedByName: `${me.name} (Platform Admin)`,
+      reopenerRespondentId: null,
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[notifyOnInstanceReopened]", e);
+  }
 
   return { ok: true };
 }
