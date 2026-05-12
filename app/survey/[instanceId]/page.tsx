@@ -5,6 +5,7 @@ import { formSpec } from "@/lib/form-data";
 import { computeScope, visibleSpec } from "@/lib/scope";
 import type { Answers, FormSpec } from "@/lib/schema";
 import { DbSurveyShell } from "@/components/form/db/DbSurveyShell";
+import type { DelegationView } from "@/components/form/state-context";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +81,39 @@ export default async function SurveyInstancePage({
   const isClosed =
     instance.status === "submitted" || instance.status === "locked";
 
+  // Load active delegations across this instance — anything not answered or
+  // cancelled is shown in-place. One row per question (latest wins).
+  const delegationRows = await db.questionDelegation.findMany({
+    where: { surveyInstanceId: instance.id },
+    include: { delegatedBy: true, parent: { include: { delegatedBy: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  const initialDelegations: Record<string, DelegationView> = {};
+  for (const d of delegationRows) {
+    // Only consider the most recent per question (we ordered desc, so first
+    // one wins).
+    if (initialDelegations[d.questionId]) continue;
+    if (d.answeredAt || d.cancelledAt) continue;
+    initialDelegations[d.questionId] = {
+      id: d.id,
+      delegatedToEmail: d.delegatedToEmail,
+      delegatedToName: d.delegatedToName,
+      delegatedByName: d.delegatedBy.name,
+      delegatedByEmail: d.delegatedBy.email,
+      forwardedFromEmail: d.parent?.delegatedBy.email ?? null,
+      answeredAt: null,
+      cancelledAt: null,
+      createdAt: d.createdAt.toISOString(),
+    };
+  }
+
   return (
     <DbSurveyShell
       instanceId={instance.id}
       spec={scopedSpec}
       initialAnswers={initialAnswers}
       initialSubmittedSections={initialSubmittedSections}
+      initialDelegations={initialDelegations}
       respondentName={me.name}
       siteName={instance.site.name}
       operatorName={instance.site.operator.name}

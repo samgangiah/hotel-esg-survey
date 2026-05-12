@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   FormBackendContext,
+  type DelegationView,
   type FormBackend,
   type SaveState,
 } from "../state-context";
@@ -29,11 +30,13 @@ export function DbFormBackendProvider({
   instanceId,
   initialAnswers,
   initialSubmittedSections,
+  initialDelegations,
   children,
 }: {
   instanceId: string;
   initialAnswers: Answers;
   initialSubmittedSections: Record<string, boolean>;
+  initialDelegations?: Record<string, DelegationView>;
   children: React.ReactNode;
 }) {
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
@@ -128,6 +131,8 @@ export function DbFormBackendProvider({
       saveState,
       mode: "db",
       instanceId,
+      delegations: initialDelegations ?? {},
+      canDelegate: true,
       setAnswer: setAnswerLocal,
       clearAnswer: clearAnswerLocal,
       markSectionSubmitted: markSectionSubmittedLocal,
@@ -137,6 +142,7 @@ export function DbFormBackendProvider({
       submittedSections,
       saveState,
       instanceId,
+      initialDelegations,
       setAnswerLocal,
       clearAnswerLocal,
       markSectionSubmittedLocal,

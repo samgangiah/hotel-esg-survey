@@ -107,6 +107,7 @@ export default async function SurveyInstanceReviewPage({
         instanceId={instance.id}
         initialAnswers={initialAnswers}
         initialSubmittedSections={initialSubmittedSections}
+        initialDelegations={{}}
       >
         <Review
           spec={scopedSpec}

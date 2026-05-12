@@ -6,6 +6,24 @@ import type { AnswerValue, Answers } from "@/lib/schema";
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
 /**
+ * Per-question delegation state surfaced to the renderer. Keyed by question
+ * id. Each entry describes the currently-active delegation: who it was sent
+ * to, whether it's answered, and the chain context.
+ */
+export interface DelegationView {
+  id: string;
+  delegatedToEmail: string;
+  delegatedToName: string | null;
+  delegatedByName: string;
+  delegatedByEmail: string;
+  /** Set when this delegation was created by forwarding a prior one. */
+  forwardedFromEmail: string | null;
+  answeredAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+}
+
+/**
  * Pluggable form backend — consumed by Wizard / SectionNav / Repeater.
  * Two implementations:
  *   - ZustandFormBackend (browser-only demo at /)
@@ -25,6 +43,14 @@ export interface FormBackend {
    * — the FileInput renders an offline-only stub when null.
    */
   instanceId: string | null;
+  /**
+   * Active delegations keyed by question id. Set in DB mode; empty in demo.
+   * QuestionRenderer reads from this to decide whether to render the input,
+   * a "waiting on Bob" pill, or a "Bob answered" read-only view.
+   */
+  delegations: Record<string, DelegationView>;
+  /** True if the current respondent is allowed to delegate (i.e. signed in). */
+  canDelegate: boolean;
 
   setAnswer: (id: string, value: AnswerValue) => void;
   clearAnswer: (id: string) => void;

@@ -111,6 +111,7 @@ model SurveyInstance {
   reports            Report[]
   sectionSubmissions SectionSubmission[]
   uploadedFiles      UploadedFile[]
+  delegations        QuestionDelegation[]
 
   @@index([siteId])
   @@index([status])
@@ -138,6 +139,9 @@ model Respondent {
   sessions           Session[]
   sectionSubmissions SectionSubmission[]
   uploadedFiles      UploadedFile[]
+
+  delegationsCreated  QuestionDelegation[] @relation("DelegationFrom")
+  delegationsReceived QuestionDelegation[] @relation("DelegationTo")
 
   @@unique([operatorId, email])
   @@index([operatorId])
@@ -238,6 +242,44 @@ model UploadedFile {
   @@index([surveyInstanceId])
   @@index([surveyInstanceId, questionId, buildingId])
   @@index([respondentId])
+}
+
+// -----------------------------------------------------------------------------
+// Question delegation — any respondent can hand a single question off to
+// another email address. The recipient gets a one-question micro-page via a
+// magic link and can answer or further forward it. The chain is tracked via
+// `parentDelegationId` so we can show "answered by Carol (via Bob)".
+// -----------------------------------------------------------------------------
+
+model QuestionDelegation {
+  id                      String    @id @default(cuid())
+  surveyInstanceId        String
+  questionId              String
+  buildingId              String     // anchor for the Answer row written when answered
+
+  delegatedByRespondentId String     // who clicked Delegate
+  delegatedToEmail        String     // who they're handing it to
+  delegatedToName         String?    // optional friendly name
+  delegatedToRespondentId String?    // populated once the delegate is materialised on first save
+
+  tokenHash               String    @unique
+  note                    String?    // optional message from the delegator
+
+  createdAt               DateTime  @default(now())
+  expiresAt               DateTime
+  answeredAt              DateTime?  // set when the delegate submits
+  cancelledAt             DateTime?  // set when the delegator cancels
+  parentDelegationId      String?    // set when this row was created by forwarding
+
+  surveyInstance SurveyInstance      @relation(fields: [surveyInstanceId], references: [id])
+  delegatedBy    Respondent          @relation("DelegationFrom", fields: [delegatedByRespondentId], references: [id])
+  delegatedTo    Respondent?         @relation("DelegationTo", fields: [delegatedToRespondentId], references: [id])
+  parent         QuestionDelegation? @relation("DelegationChain", fields: [parentDelegationId], references: [id])
+  children       QuestionDelegation[] @relation("DelegationChain")
+
+  @@index([surveyInstanceId])
+  @@index([surveyInstanceId, questionId, buildingId])
+  @@index([delegatedByRespondentId])
 }
 
 // -----------------------------------------------------------------------------

@@ -21,6 +21,15 @@ import { YesNo } from "./inputs/YesNo";
 import { FileInput } from "./inputs/FileInput";
 import { TableInput } from "./inputs/TableInput";
 import { Repeater } from "./Repeater";
+import { useFormBackend, useRepeaterScope } from "./state-context";
+import {
+  DelegatePopover,
+  DelegationStatus,
+} from "./delegate/DelegatePopover";
+import {
+  delegateQuestion,
+  cancelDelegation,
+} from "./backends/delegate-actions";
 
 interface Props {
   question: Question;
@@ -41,6 +50,8 @@ export function QuestionRenderer({
 }: Props) {
   const searchParams = useSearchParams();
   const showAdded = searchParams.get("showAdded") === "true";
+  const backend = useFormBackend();
+  const repeaterScope = useRepeaterScope();
 
   if (!isQuestionVisible(question, scope)) return null;
 
@@ -56,6 +67,19 @@ export function QuestionRenderer({
           : MULTI_HINT
       : question.help;
 
+  // Delegation is supported on top-level questions only (not repeater
+  // sub-questions, where the row context can't be reproduced over email
+  // — and not file / table / repeater question types themselves, which
+  // don't fit on a one-question micro-page).
+  const delegationsByQ = backend.delegations;
+  const activeDelegation = delegationsByQ[question.id];
+  const canDelegate =
+    backend.canDelegate &&
+    !!backend.instanceId &&
+    !repeaterScope &&
+    !["repeater", "file", "table"].includes(question.type);
+  const isDelegated = !!activeDelegation;
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -68,9 +92,32 @@ export function QuestionRenderer({
         {showAdded && question.added && <Pill>new</Pill>}
       </div>
       {help && <p className="text-sm text-muted">{help}</p>}
-      <div>
-        {renderInput(question, value, (v) => setValue(question.id, v))}
-      </div>
+      {isDelegated ? (
+        <DelegationStatus
+          delegatedToEmail={activeDelegation.delegatedToEmail}
+          delegatedToName={activeDelegation.delegatedToName}
+          forwardedFromEmail={activeDelegation.forwardedFromEmail}
+          onCancel={async () => cancelDelegation(activeDelegation.id)}
+        />
+      ) : (
+        <>
+          <div>
+            {renderInput(question, value, (v) => setValue(question.id, v))}
+          </div>
+          {canDelegate && backend.instanceId && (
+            <DelegatePopover
+              questionLabel={question.label}
+              onDelegate={(args) =>
+                delegateQuestion({
+                  instanceId: backend.instanceId!,
+                  questionId: question.id,
+                  ...args,
+                })
+              }
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

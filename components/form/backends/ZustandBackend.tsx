@@ -45,6 +45,8 @@ export function ZustandFormBackendProvider({
       saveState,
       mode: "demo",
       instanceId: null,
+      delegations: {},
+      canDelegate: false,
       setAnswer: setAnswerInStore,
       clearAnswer: clearAnswerInStore,
       markSectionSubmitted: markSectionSubmittedInStore,

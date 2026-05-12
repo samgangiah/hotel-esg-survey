@@ -43,6 +43,25 @@ interface WelcomeEmail {
   inviterName: string;
 }
 
+interface DelegationEmail {
+  to: string;
+  toName: string | null;
+  magicLink: string;
+  delegatorName: string;
+  siteName: string;
+  questionLabel: string;
+  note: string | null;
+}
+
+interface DelegationCompletedEmail {
+  to: string;          // back to the delegator
+  toName: string;
+  delegateEmail: string;
+  questionLabel: string;
+  siteName: string;
+  surveyUrl: string;
+}
+
 const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
 
 function getFrom(): string {
@@ -420,6 +439,140 @@ function reminderHtml(args: ReminderEmail) {
         Your progress is saved automatically. Click the link any time on the
         device you've been using.
       </p>
+    `,
+  });
+}
+
+// --- Question delegation ---------------------------------------------------
+
+export async function sendDelegationEmail(args: DelegationEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Delegation — ${args.siteName}`));
+    console.log(`To:        ${args.toName ?? "(no name)"} <${args.to}>`);
+    console.log(`From:      ${args.delegatorName}`);
+    console.log(`Question:  ${args.questionLabel}`);
+    if (args.note) console.log(`Note:      ${args.note}`);
+    console.log(`Link:      ${args.magicLink}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `${args.delegatorName} needs your input on one question — ${args.siteName}`,
+    text: delegationText(args),
+    html: delegationHtml(args),
+  });
+}
+
+function delegationText(args: DelegationEmail) {
+  const greet = args.toName ? `Hi ${args.toName.split(" ")[0]}` : "Hi";
+  return [
+    `${greet},`,
+    "",
+    `${args.delegatorName} is filling in the energy survey for ${args.siteName} and needs your help with one question:`,
+    "",
+    `  "${args.questionLabel}"`,
+    "",
+    args.note ? `Their note: ${args.note}` : "",
+    args.note ? "" : "",
+    "It should take less than a minute. Open the question with the link below:",
+    args.magicLink,
+    "",
+    "If you don't know the answer either, you can pass the question on to someone else from the same page.",
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
+function delegationHtml(args: DelegationEmail) {
+  const greet = args.toName
+    ? `Hi ${escapeHtml(args.toName.split(" ")[0])}`
+    : "Hi";
+  return baseHtml({
+    preheader: `${args.delegatorName} needs your input on one question for ${args.siteName}.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">${greet},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.delegatorName)}</strong> is filling in the
+        energy survey for <strong>${escapeHtml(args.siteName)}</strong> and
+        needs your help with one question:
+      </p>
+      <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #2F5D50;background:#f4f1e6;font:500 15px/1.45 system-ui,-apple-system,sans-serif;color:#1f2421">
+        ${escapeHtml(args.questionLabel)}
+      </blockquote>
+      ${
+        args.note
+          ? `<p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px"><em>${escapeHtml(args.delegatorName)} added: ${escapeHtml(args.note)}</em></p>`
+          : ""
+      }
+      <p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        It should take less than a minute. Open the question below:
+      </p>
+      ${ctaButton(args.magicLink, "Answer this question")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 0">
+        Don't know the answer either? Pass the question on to someone better
+        placed from the same page.
+      </p>
+    `,
+  });
+}
+
+export async function sendDelegationCompletedEmail(args: DelegationCompletedEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.log(banner(`Delegation answered — ${args.siteName}`));
+    console.log(`To:        ${args.toName} <${args.to}>`);
+    console.log(`Answered:  ${args.questionLabel}`);
+    console.log(`By:        ${args.delegateEmail}`);
+    console.log(`Survey:    ${args.surveyUrl}`);
+    console.log(`${"=".repeat(64)}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: getFrom(),
+    to: args.to,
+    subject: `${args.delegateEmail} answered the question you delegated`,
+    text: delegationCompletedText(args),
+    html: delegationCompletedHtml(args),
+  });
+}
+
+function delegationCompletedText(args: DelegationCompletedEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return [
+    `Hi ${firstName},`,
+    "",
+    `${args.delegateEmail} has answered the question you delegated for ${args.siteName}:`,
+    "",
+    `  "${args.questionLabel}"`,
+    "",
+    "Open the survey to see their answer:",
+    args.surveyUrl,
+    "",
+    "Thanks,",
+    "Hotel Energy & ESG Survey team",
+  ].join("\n");
+}
+
+function delegationCompletedHtml(args: DelegationCompletedEmail) {
+  const firstName = args.toName.split(" ")[0] || args.toName;
+  return baseHtml({
+    preheader: `${args.delegateEmail} answered your delegated question.`,
+    body: `
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">Hi ${escapeHtml(firstName)},</p>
+      <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        <strong>${escapeHtml(args.delegateEmail)}</strong> has answered the
+        question you delegated for <strong>${escapeHtml(args.siteName)}</strong>:
+      </p>
+      <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #2F5D50;background:#f4f1e6;font:500 15px/1.45 system-ui,-apple-system,sans-serif;color:#1f2421">
+        ${escapeHtml(args.questionLabel)}
+      </blockquote>
+      ${ctaButton(args.surveyUrl, "See their answer")}
     `,
   });
 }
