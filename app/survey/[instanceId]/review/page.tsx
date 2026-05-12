@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireRespondent } from "@/lib/respondent-auth";
 import { formSpec } from "@/lib/form-data";
@@ -57,6 +58,9 @@ export default async function SurveyInstanceReviewPage({
     initialSubmittedSections[s.sectionId] = true;
   }
 
+  const isClosed =
+    instance.status === "submitted" || instance.status === "locked";
+
   return (
     <div>
       <header className="border-b border-line bg-white">
@@ -79,6 +83,26 @@ export default async function SurveyInstanceReviewPage({
           </Link>
         </div>
       </header>
+      {isClosed && (
+        <div className="border-b border-accent/30 bg-accent-soft/50">
+          <div className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-3 text-sm text-accent-deep sm:px-6">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              <span className="font-medium">This survey is closed.</span>{" "}
+              {instance.lockedAt && (
+                <>
+                  Submitted on{" "}
+                  <span className="font-medium">
+                    {instance.lockedAt.toISOString().slice(0, 10)}
+                  </span>
+                  .{" "}
+                </>
+              )}
+              Review is read-only.
+            </p>
+          </div>
+        </div>
+      )}
       <DbFormBackendProvider
         instanceId={instance.id}
         initialAnswers={initialAnswers}

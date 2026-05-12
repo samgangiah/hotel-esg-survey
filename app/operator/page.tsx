@@ -11,9 +11,11 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Pill } from "@/components/ui/Pill";
 import { OperatorNav } from "@/components/operator/OperatorNav";
+import { CloseSurveyButton } from "@/components/operator/CloseSurveyButton";
 import { db } from "@/lib/db";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 import { ROLE_LABELS, type RoleKey } from "@/lib/roles";
+import { closeInstance, reopenInstance } from "./actions";
 
 export const metadata = { title: "Operator dashboard" };
 export const dynamic = "force-dynamic";
@@ -82,8 +84,8 @@ export default async function OperatorDashboard() {
               const inst = s.surveyInstances[0];
               return (
                 <div key={s.id} className="px-6 py-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <Link
                         href={`/operator/sites/${s.id}`}
                         className="group inline-flex items-center gap-2 font-medium text-ink hover:text-accent-deep"
@@ -95,12 +97,35 @@ export default async function OperatorDashboard() {
                       {s.address && (
                         <p className="text-xs text-muted">{s.address}</p>
                       )}
+                      <p className="mt-1 text-xs text-muted">
+                        {s.buildings.length} building
+                        {s.buildings.length === 1 ? "" : "s"}
+                        {inst ? (
+                          <>
+                            {" · status: "}
+                            <span className="font-medium text-ink">
+                              {inst.status}
+                            </span>
+                            {inst.lockedAt && (
+                              <span>
+                                {" · closed "}
+                                {inst.lockedAt.toISOString().slice(0, 10)}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span> · no instance</span>
+                        )}
+                      </p>
                     </div>
-                    <span className="text-xs text-muted">
-                      {s.buildings.length} building
-                      {s.buildings.length === 1 ? "" : "s"}
-                      {inst ? ` · instance: ${inst.status}` : ""}
-                    </span>
+                    {inst && (
+                      <CloseSurveyButton
+                        instanceId={inst.id}
+                        status={inst.status}
+                        onClose={closeInstance}
+                        onReopen={reopenInstance}
+                      />
+                    )}
                   </div>
                   {s.buildings.length > 0 && (
                     <p className="mt-2 text-xs text-muted">

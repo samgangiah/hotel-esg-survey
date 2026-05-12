@@ -52,6 +52,9 @@ export async function saveAnswer(args: {
     const { me, instance, anchorBuildingId } = await authoriseInstance(
       args.instanceId
     );
+    if (instance.status === "submitted" || instance.status === "locked") {
+      return { ok: false, error: "Survey is closed — answers can no longer be edited." };
+    }
 
     const isEmpty =
       args.value === undefined ||
@@ -104,6 +107,9 @@ export async function submitSection(args: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const { me, instance } = await authoriseInstance(args.instanceId);
+    if (instance.status === "submitted" || instance.status === "locked") {
+      return { ok: false, error: "Survey is closed — cannot submit sections." };
+    }
 
     await db.sectionSubmission.upsert({
       where: {

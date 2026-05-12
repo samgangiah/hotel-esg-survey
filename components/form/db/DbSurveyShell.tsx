@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { Wizard } from "../Wizard";
 import { CoverPage } from "../CoverPage";
 import { DbFormBackendProvider } from "../backends/DbBackend";
@@ -21,6 +22,8 @@ export function DbSurveyShell({
   siteName,
   operatorName,
   showCoverByDefault,
+  isClosed,
+  closedAt,
 }: {
   instanceId: string;
   spec: FormSpec;
@@ -30,6 +33,8 @@ export function DbSurveyShell({
   siteName: string;
   operatorName: string;
   showCoverByDefault: boolean;
+  isClosed: boolean;
+  closedAt: Date | null;
 }) {
   return (
     <div>
@@ -60,6 +65,28 @@ export function DbSurveyShell({
           </p>
         </div>
       </header>
+
+      {isClosed && (
+        <div className="border-b border-accent/30 bg-accent-soft/50">
+          <div className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-3 text-sm text-accent-deep sm:px-6">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              <span className="font-medium">This survey is closed.</span>{" "}
+              {closedAt && (
+                <>
+                  Submitted on{" "}
+                  <span className="font-medium">
+                    {closedAt.toISOString().slice(0, 10)}
+                  </span>
+                  .{" "}
+                </>
+              )}
+              You can still review your answers — but no new edits are accepted
+              until your Operator Admin reopens it.
+            </p>
+          </div>
+        </div>
+      )}
 
       <DbFormBackendProvider
         instanceId={instanceId}

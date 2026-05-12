@@ -77,6 +77,9 @@ export default async function SurveyInstancePage({
 
   const showCoverByDefault = !sp.section;
 
+  const isClosed =
+    instance.status === "submitted" || instance.status === "locked";
+
   return (
     <DbSurveyShell
       instanceId={instance.id}
@@ -87,6 +90,8 @@ export default async function SurveyInstancePage({
       siteName={instance.site.name}
       operatorName={instance.site.operator.name}
       showCoverByDefault={showCoverByDefault}
+      isClosed={isClosed}
+      closedAt={instance.lockedAt}
     />
   );
 }
