@@ -158,6 +158,10 @@ export function Wizard({
     const qs = new URLSearchParams();
     qs.set("section", section.id);
     qs.set("group", group.id);
+    // Pass the current basePath so /saved knows where to send them when they
+    // click "Continue where I left off" — demo respondents return to /demo,
+    // real respondents return to their /survey/[instanceId].
+    qs.set("back", basePath);
     if (showAdded) qs.set("showAdded", "true");
     router.push(`${savedPath}?${qs.toString()}`);
   };

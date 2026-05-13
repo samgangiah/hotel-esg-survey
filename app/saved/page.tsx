@@ -1,12 +1,17 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { CircleCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { SavedActions } from "./SavedActions";
+import { SavedBackLink } from "./SavedBackLink";
 
 export const metadata = { title: "Saved" };
 
+/**
+ * Shared "your progress is saved" confirmation screen. Used by both the
+ * /demo Zustand flow and the real /survey/[id] DB flow. The Wizard's
+ * Save-for-later button passes `?back=<basePath>` so the buttons here
+ * route back to the right place.
+ */
 export default function SavedPage() {
   return (
     <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
@@ -16,9 +21,9 @@ export default function SavedPage() {
         </div>
         <h1 className="font-display text-3xl text-ink">Saved for later</h1>
         <p className="text-muted">
-          Your progress is saved on this device. Come back through your invite
-          link any time to pick up where you left off — your answers will be
-          waiting.
+          Your progress has been saved. Come back through your invite link
+          any time — on this device or another — to pick up where you left
+          off.
         </p>
         <p className="text-xs text-muted">
           If a colleague needs to take it from here, they can use their own
@@ -32,12 +37,9 @@ export default function SavedPage() {
       </Card>
 
       <div className="mt-6 text-center">
-        <Link
-          href="/"
-          className="text-sm text-muted underline-offset-2 hover:text-ink hover:underline"
-        >
-          Back to the cover page
-        </Link>
+        <Suspense fallback={null}>
+          <SavedBackLink />
+        </Suspense>
       </div>
     </div>
   );

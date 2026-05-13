@@ -42,7 +42,11 @@ export function Review({
   const onSubmit = () => {
     const qs = new URLSearchParams();
     if (showAdded) qs.set("showAdded", "true");
-    router.push(`${donePath}${qs.toString() ? `?${qs.toString()}` : ""}`);
+    // Pass basePath so the /done screen's "Start a new survey" CTA returns
+    // them to the right place — demo or scoped survey, never the marketing
+    // landing.
+    qs.set("back", basePath);
+    router.push(`${donePath}?${qs.toString()}`);
   };
 
   return (

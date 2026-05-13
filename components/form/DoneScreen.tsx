@@ -1,19 +1,28 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formSpec } from "@/lib/form-data";
 import { useFormStore } from "@/lib/store";
 
+/**
+ * "Thanks for finishing" screen. Reads `?back=<basePath>` (passed by
+ * Review's Submit button) so the "Start a new survey" CTA returns to the
+ * right place — /demo for the demo, /survey/[id] for a real respondent.
+ */
 export function DoneScreen() {
   const router = useRouter();
+  const params = useSearchParams();
   const reset = useFormStore((s) => s.reset);
+
+  const rawBack = params.get("back") ?? "/";
+  const back = rawBack.startsWith("/") ? rawBack : "/";
 
   const startAgain = () => {
     reset();
-    router.push("/");
+    router.push(back);
   };
 
   return (
