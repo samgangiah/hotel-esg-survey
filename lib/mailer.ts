@@ -129,6 +129,82 @@ function getResend(): Resend | null {
 const banner = (title: string) =>
   `\n${"=".repeat(64)}\n📧 [STUB MAILER] ${title}\n${"=".repeat(64)}`;
 
+// --- Shared blurbs ---------------------------------------------------------
+
+/**
+ * Plain-text "what this magic link is and how to use it" explainer. We add
+ * it to every email that contains a sign-in link, because most users are
+ * coming from password-based services and need a beat to understand the
+ * passwordless model.
+ *
+ * `full` — used in onboarding (welcome / invitation), where it's the user's
+ *          first encounter with the system. A few short sentences.
+ * `brief` — used in recovery / reminder, where the user already knows what
+ *           this is and a single-sentence nudge is enough.
+ */
+function magicLinkExplainerText(mode: "full" | "brief"): string[] {
+  if (mode === "brief") {
+    return [
+      "How this works: no password — clicking the link above signs you in. The same link works on your phone, laptop, or any other device.",
+    ];
+  }
+  return [
+    "How signing in works",
+    "There's no password to remember. We use a 'magic link' system:",
+    "  • Clicking the button above signs you in instantly.",
+    "  • The link is unique to you — keep it private.",
+    "  • You can use it from your phone, laptop, or any other device. Each click signs that device in; your answers stay in sync across all of them.",
+    "  • If you ever lose the email, request a fresh link any time at " +
+      `${process.env.APP_URL ?? "https://esg.digitalrain.cloud"}/recover`,
+  ];
+}
+
+function magicLinkExplainerHtml(mode: "full" | "brief"): string {
+  if (mode === "brief") {
+    return `
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
+        <strong>How this works:</strong> no password — clicking the link above
+        signs you in. The same link works on your phone, laptop, or any other
+        device.
+      </p>`;
+  }
+  const recoverUrl = `${process.env.APP_URL ?? "https://esg.digitalrain.cloud"}/recover`;
+  return `
+    <div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e6e3da;border-radius:8px;background:#fafaf7">
+      <p style="font:600 13px/1.4 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 6px">
+        How signing in works
+      </p>
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 8px">
+        There's no password to remember. We use a magic-link system:
+      </p>
+      <ul style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0;padding-left:18px">
+        <li>Clicking the button above signs you in instantly.</li>
+        <li>The link is unique to you — keep it private.</li>
+        <li>You can use it from your phone, laptop, or any other device. Each click signs that device in; your answers stay in sync across all of them.</li>
+        <li>If you lose the email, request a fresh link any time at <a href="${escapeHtml(recoverUrl)}" style="color:#2F5D50">${escapeHtml(recoverUrl.replace(/^https?:\/\//, ""))}</a>.</li>
+      </ul>
+    </div>`;
+}
+
+/**
+ * One-line statement of why the survey exists — used to reassure recipients
+ * (especially delegates who got the email out of the blue) that this is a
+ * narrow data-collection exercise, not marketing or anything broader.
+ */
+function surveyPurposeText(siteName: string): string {
+  return `This is a one-off survey collecting data on energy usage at ${siteName} for sustainability reporting. Your answers are used only for that purpose and are visible only to the team and the platform admin.`;
+}
+
+function surveyPurposeHtml(siteName: string): string {
+  return `
+    <p style="font:400 12px/1.5 system-ui,-apple-system,sans-serif;color:#888;margin:16px 0 0">
+      This is a one-off survey collecting data on energy usage at
+      <strong>${escapeHtml(siteName)}</strong> for sustainability reporting.
+      Your answers are used only for that purpose and are visible only to the
+      team and the platform admin.
+    </p>`;
+}
+
 // --- Operator (Platform Admin) login link ----------------------------------
 
 export async function sendOperatorLoginEmail(args: OperatorLoginEmail) {
@@ -212,7 +288,9 @@ function invitationText(args: InvitationEmail) {
     "Open the survey with your personal link below:",
     args.magicLink,
     "",
-    "The link is one-time-use and bound to whichever device you first open it on. You can save your progress at any point and come back through the same link.",
+    ...magicLinkExplainerText("full"),
+    "",
+    surveyPurposeText(args.siteName),
     "",
     "Thanks,",
     "Hotel Energy & ESG Survey team",
@@ -235,12 +313,9 @@ function invitationHtml(args: InvitationEmail) {
         Your section: <strong>${escapeHtml(args.roleLabel)}</strong>
       </p>
       ${ctaButton(args.magicLink, "Open my survey")}
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 8px">
-        Your link is personal to you and bound to the first device that opens it.
-        You can save your progress at any point and come back through the same
-        link.
-      </p>
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
+      ${magicLinkExplainerHtml("full")}
+      ${surveyPurposeHtml(args.siteName)}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
         Thanks,<br/>Hotel Energy &amp; ESG Survey team
       </p>
     `,
@@ -280,7 +355,9 @@ function recoveryText(args: RecoveryEmail) {
     "Open the survey with your new link below. The old link is now invalid.",
     args.magicLink,
     "",
-    "This link is one-time-use and will bind to whichever device you open it on first. If you didn't request this, you can safely ignore this email.",
+    ...magicLinkExplainerText("brief"),
+    "",
+    "If you didn't request this, you can safely ignore this email.",
     "",
     "Thanks,",
     "Hotel Energy & ESG Survey team",
@@ -303,11 +380,9 @@ function recoveryHtml(args: RecoveryEmail) {
         Your section: <strong>${escapeHtml(args.roleLabel)}</strong>
       </p>
       ${ctaButton(args.magicLink, "Open my survey")}
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 8px">
-        This link is personal to you and will bind to the first device you open it on.
-        If you didn't request this, you can safely ignore this email.
-      </p>
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
+      ${magicLinkExplainerHtml("brief")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
+        If you didn't request this, you can safely ignore this email.<br/><br/>
         Thanks,<br/>Hotel Energy &amp; ESG Survey team
       </p>
     `,
@@ -350,7 +425,9 @@ function welcomeText(args: WelcomeEmail) {
     "",
     args.magicLink,
     "",
-    "The link is one-time-use and binds to whichever device you first open it on. Save your progress at any point and come back through the same link.",
+    ...magicLinkExplainerText("full"),
+    "",
+    `This is a one-off survey collecting data on energy usage at ${args.operatorName}'s hotel(s) for sustainability reporting. Your account is used only for that purpose.`,
     "",
     "Any questions, just reply to this email.",
     "",
@@ -387,12 +464,13 @@ function welcomeHtml(args: WelcomeEmail) {
         <li>Open the survey</li>
       </ol>
       ${ctaButton(args.magicLink, "Sign in and set up my hotel")}
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 8px">
-        Your link is personal to you and binds to the first device you open
-        it on. You can save your progress at any point and come back through
-        the same link.
+      ${magicLinkExplainerHtml("full")}
+      <p style="font:400 12px/1.5 system-ui,-apple-system,sans-serif;color:#888;margin:16px 0 0">
+        This is a one-off survey collecting data on energy usage at
+        <strong>${escapeHtml(args.operatorName)}</strong>'s hotel(s) for
+        sustainability reporting. Your account is used only for that purpose.
       </p>
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:0">
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
         Any questions, just reply to this email.<br/>Hotel Energy &amp; ESG
         Survey team
       </p>
@@ -462,7 +540,9 @@ function reminderText(args: ReminderEmail) {
     "Pick up where you left off:",
     args.magicLink,
     "",
-    "Your progress is saved automatically. Click the link any time on the device you've been using.",
+    ...magicLinkExplainerText("brief"),
+    "",
+    "Your progress is saved automatically.",
     "",
     "Thanks,",
     "Hotel Energy & ESG Survey team",
@@ -485,9 +565,9 @@ function reminderHtml(args: ReminderEmail) {
         Your section: <strong>${escapeHtml(args.roleLabel)}</strong>
       </p>
       ${ctaButton(args.magicLink, ctaLabel)}
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 0">
-        Your progress is saved automatically. Click the link any time on the
-        device you've been using.
+      ${magicLinkExplainerHtml("brief")}
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
+        Your progress is saved automatically.
       </p>
     `,
   });
@@ -521,14 +601,20 @@ function delegationText(args: DelegationEmail) {
   return [
     `${greet},`,
     "",
-    `${args.delegatorName} is filling in the energy survey for ${args.siteName} and needs your help with one question:`,
+    `${args.delegatorName} is filling in the energy survey for ${args.siteName} and has asked for your help with one question:`,
     "",
     `  "${args.questionLabel}"`,
     "",
+    `${args.delegatorName} chose you because they believe you're the best person to answer this specific question. It should take less than a minute.`,
+    "",
     args.note ? `Their note: ${args.note}` : "",
     args.note ? "" : "",
-    "It should take less than a minute. Open the question with the link below:",
+    "Open the question with the link below:",
     args.magicLink,
+    "",
+    "About this link: there's no password and no sign-up. The link takes you directly to the single question — nothing else. It works on any device.",
+    "",
+    `Purpose: this is a one-off survey collecting data on energy usage at ${args.siteName} for sustainability reporting. Your answer is used only for that purpose and won't be shared beyond the survey team.`,
     "",
     "If you don't know the answer either, you can pass the question on to someone else from the same page.",
     "",
@@ -549,22 +635,39 @@ function delegationHtml(args: DelegationEmail) {
       <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">${greet},</p>
       <p style="font:400 15px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
         <strong>${escapeHtml(args.delegatorName)}</strong> is filling in the
-        energy survey for <strong>${escapeHtml(args.siteName)}</strong> and
-        needs your help with one question:
+        energy survey for <strong>${escapeHtml(args.siteName)}</strong> and has
+        asked for your help with one question:
       </p>
       <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #2F5D50;background:#f4f1e6;font:500 15px/1.45 system-ui,-apple-system,sans-serif;color:#1f2421">
         ${escapeHtml(args.questionLabel)}
       </blockquote>
+      <p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
+        ${escapeHtml(args.delegatorName)} chose you because they believe
+        you're the best person to answer this specific question. It should
+        take less than a minute.
+      </p>
       ${
         args.note
-          ? `<p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px"><em>${escapeHtml(args.delegatorName)} added: ${escapeHtml(args.note)}</em></p>`
+          ? `<p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px"><em>${escapeHtml(args.delegatorName)} added: "${escapeHtml(args.note)}"</em></p>`
           : ""
       }
-      <p style="font:400 14px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 16px">
-        It should take less than a minute. Open the question below:
-      </p>
       ${ctaButton(args.magicLink, "Answer this question")}
-      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:24px 0 0">
+      <div style="margin:20px 0 0;padding:14px 16px;border:1px solid #e6e3da;border-radius:8px;background:#fafaf7">
+        <p style="font:600 13px/1.4 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0 0 6px">
+          About this link
+        </p>
+        <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#1f2421;margin:0">
+          There's no password and no sign-up. The link takes you directly to
+          the single question — nothing else. It works on any device.
+        </p>
+      </div>
+      <p style="font:400 12px/1.5 system-ui,-apple-system,sans-serif;color:#888;margin:16px 0 0">
+        <strong>Purpose:</strong> this is a one-off survey collecting data on
+        energy usage at <strong>${escapeHtml(args.siteName)}</strong> for
+        sustainability reporting. Your answer is used only for that purpose
+        and won't be shared beyond the survey team.
+      </p>
+      <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
         Don't know the answer either? Pass the question on to someone better
         placed from the same page.
       </p>

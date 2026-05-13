@@ -15,10 +15,11 @@
       "pointersHeading": "A few pointers",
       "tips": [
         {
-          "body": "**Different people can answer different sections.** You can respond to the section that is relevant to you. On the next page there is a panel on the left. You can use this to go straight to your section. Press 'Submit this section' when you've finished your part. Someone else can pick up the next."
+          "body": "**Different people can answer different sections.** You can respond to the section that is relevant to you. On the next page there is a panel on the left. You can use this to go straight to your section. Press 'Submit this section' when you've finished your part. Someone else can pick up the next.",
+          "showForSoloRespondent": false
         },
         {
-          "body": "**Save and come back later.** 'Save for later' on any page keeps your progress on this device. Use the same link in your email to pick up where you left off."
+          "body": "**Save and come back later.** 'Save for later' on any page keeps your progress. Sign in on any device with the same link to pick up where you left off — your answers stay in sync."
         },
         {
           "body": "**Estimates are fine.** Where you don't have an exact figure, your best guess is more useful than a blank."

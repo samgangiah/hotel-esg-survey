@@ -19,8 +19,6 @@ export async function confirmIdentity(
   });
   if (!invitation) return { ok: false, error: "Link not found." };
   if (invitation.expiresAt < new Date()) return { ok: false, error: "Link expired." };
-  if (invitation.boundSessionId)
-    return { ok: false, error: "Link already used on another device." };
 
   const h = await headers();
   const userAgent = h.get("user-agent") ?? null;
@@ -29,6 +27,9 @@ export async function confirmIdentity(
     h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     null;
 
+  // Multi-device: each click creates its own Session row. The Invitation's
+  // openedAt + boundSessionId fields are set only on the FIRST click (kept
+  // for audit / forensic trail); subsequent clicks just add fresh sessions.
   const session = await db.$transaction(async (tx) => {
     const s = await tx.session.create({
       data: {
@@ -38,10 +39,12 @@ export async function confirmIdentity(
         expiresAt: new Date(Date.now() + NINETY_DAYS_MS),
       },
     });
-    await tx.invitation.update({
-      where: { id: invitation.id },
-      data: { openedAt: new Date(), boundSessionId: s.id },
-    });
+    if (!invitation.openedAt) {
+      await tx.invitation.update({
+        where: { id: invitation.id },
+        data: { openedAt: new Date(), boundSessionId: s.id },
+      });
+    }
     await tx.assignment.update({
       where: { id: invitation.assignmentId },
       data: { status: "opened" },

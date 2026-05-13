@@ -27,7 +27,6 @@ export default async function MagicLinkPage({
           building: true,
         },
       },
-      boundSession: true,
     },
   });
 
@@ -41,10 +40,12 @@ export default async function MagicLinkPage({
     return <ExpiredOrInvalid />;
   }
 
-  // Already bound to a session — link is single-use across devices.
-  if (invitation.boundSessionId && invitation.boundSession) {
-    return <AlreadyBound />;
-  }
+  // Note: we used to block subsequent clicks once a session had bound to a
+  // device. That made multi-device use very awkward (forced respondents
+  // through /recover for each device). We now allow the same link to be
+  // used on any device until the token's expiresAt — each click creates
+  // its own Session row. The original boundSessionId is still recorded on
+  // first click for audit, but doesn't restrict future clicks.
 
   const a = invitation.assignment;
   const r = a.respondent;
@@ -116,28 +117,6 @@ function ExpiredOrInvalid() {
         <p className="text-muted">
           This link is no longer valid. Ask your Site Admin to send a fresh one, or
           recover it yourself below.
-        </p>
-        <div className="pt-2">
-          <Link href="/recover">
-            <Button variant="secondary">Recover my link</Button>
-          </Link>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function AlreadyBound() {
-  return (
-    <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
-      <Card className="space-y-3 p-8 text-center sm:p-10">
-        <h1 className="font-display text-2xl text-ink">
-          This link has already been opened
-        </h1>
-        <p className="text-muted">
-          The link has been bound to another device or browser. If that wasn't you,
-          ask your Site Admin to issue a new link, which will invalidate the previous
-          binding.
         </p>
         <div className="pt-2">
           <Link href="/recover">

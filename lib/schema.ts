@@ -98,6 +98,13 @@ export interface CoverTip {
   body: string;
   /** Optional nested sub-bullets (rendered indented). */
   items?: string[];
+  /**
+   * If false, this tip is hidden when the respondent's scoped spec contains
+   * only one section. Used to drop multi-section guidance (eg "different
+   * people can answer different sections") for solo respondents — there's
+   * no other section for them, and the tip reads as confusing.
+   */
+  showForSoloRespondent?: boolean;
 }
 
 export interface CoverPage {

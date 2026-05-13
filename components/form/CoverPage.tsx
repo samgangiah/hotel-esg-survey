@@ -48,16 +48,36 @@ export function CoverPage({
     : [];
   const pointersHeading = cover.pointersHeading ?? "A few pointers";
 
+  // Solo respondents (scope of one section) shouldn't see the "different
+  // people can answer different sections" tip — it implies a navigation
+  // model they won't actually have.
+  const isSoloRespondent = activeSpec.sections.length === 1;
+  const filteredTips = (cover.tips ?? []).filter((raw) => {
+    if (typeof raw === "string") return true;
+    if (isSoloRespondent && raw.showForSoloRespondent === false) return false;
+    return true;
+  });
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <Card className="space-y-8 p-8 sm:p-12">
-        <header>
-          <p className="text-xs uppercase tracking-wide text-muted">
-            Hotel Energy &amp; ESG Survey
-          </p>
-          <h1 className="mt-2 font-display text-3xl text-ink sm:text-4xl">
-            {cover.headline}
-          </h1>
+        <header className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">
+              Hotel Energy &amp; ESG Survey
+            </p>
+            <h1 className="mt-2 font-display text-3xl text-ink sm:text-4xl">
+              {cover.headline}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={begin}
+            className="text-sm text-muted underline-offset-2 hover:text-ink hover:underline"
+            title="Skip the intro and go straight to the survey"
+          >
+            Skip intro →
+          </button>
         </header>
 
         {intros.length > 0 && (
@@ -68,13 +88,13 @@ export function CoverPage({
           </div>
         )}
 
-        {cover.tips && cover.tips.length > 0 && (
+        {filteredTips.length > 0 && (
           <div className="space-y-4 rounded-card border border-line bg-canvas/40 p-5 sm:p-6">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
               {pointersHeading}
             </p>
             <ul className="space-y-3">
-              {cover.tips.map((raw, i) => {
+              {filteredTips.map((raw, i) => {
                 const tip: CoverTip =
                   typeof raw === "string" ? { body: raw } : raw;
                 return (
