@@ -1,13 +1,13 @@
 {
   "meta": {
-    "title": "Hotel Energy & ESG Survey",
+    "title": "PHS Energy",
     "subtitle": "A short diagnostic to identify energy waste and improvement opportunities",
     "version": "0.4",
     "scope": "Pilot — General, Guest Rooms and Laundry. v0.4 incorporates Penny Court's second-round review (cover page, per-section submit, save-for-later, contents panel polish, copy-from-previous on machines, plus content tweaks across heating, HVAC, mini-fridges, towel rails).",
     "submitButtonLabel": "Review my answers",
     "completionMessage": "Thanks — that's everything we need for the initial diagnostic. We'll review your answers and be in touch.",
     "coverPage": {
-      "headline": "Welcome to the Hotel Energy & ESG Survey",
+      "headline": "Welcome to PHS Energy",
       "intro": [
         "Thank you for taking the time to fill this in. The purpose of the survey is to understand your energy consumption and savings opportunities across two areas of the hotel: Guest Rooms and Laundry.",
         "Please answer the questions as best as you can."

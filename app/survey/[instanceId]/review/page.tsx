@@ -70,7 +70,7 @@ export default async function SurveyInstanceReviewPage({
             className="flex items-center gap-3"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-card bg-accent text-white">
-              <span className="font-display text-base">e</span>
+              <span className="text-xs font-medium">phs</span>
             </div>
             <div>
               <p className="font-display text-base leading-tight text-ink">

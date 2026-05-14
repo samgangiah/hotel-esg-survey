@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 export const metadata = {
-  title: "Hotel Energy & ESG Survey",
+  title: "PHS Energy — find the savings hiding in your hotel",
   description:
     "A short, structured way to capture how your hotel uses energy — so you know where to save.",
 };
@@ -41,12 +41,12 @@ function Header() {
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-card bg-accent text-white font-display text-base">
-            e
+          <span className="flex h-9 w-9 items-center justify-center rounded-card bg-accent text-white text-xs font-medium">
+            phs
           </span>
           <span>
             <span className="block font-display text-lg leading-tight text-ink">
-              Hotel Energy &amp; ESG Survey
+              PHS Energy
             </span>
             <span className="block text-xs text-muted">
               Find the savings hiding in your hotel
@@ -224,7 +224,7 @@ function CtaBlock() {
           </h2>
           <p className="mt-2 text-sm text-muted">
             Find the email from us with subject starting{" "}
-            <em>&ldquo;Welcome to the Hotel Energy &amp; ESG Survey&rdquo;</em>
+            <em>&ldquo;Welcome to PHS Energy&rdquo;</em>
             {" "}or your colleague&apos;s name. Click the link inside. If you
             can&apos;t find it, send yourself a fresh one.
           </p>
@@ -259,6 +259,12 @@ function Footer() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <a
+            href="https://phsenergy.co.uk"
+            className="underline-offset-2 hover:text-ink hover:underline"
+          >
+            phsenergy.co.uk
+          </a>
           <Link
             href="/demo"
             className="underline-offset-2 hover:text-ink hover:underline"
@@ -271,12 +277,6 @@ function Footer() {
           >
             Lost your link?
           </Link>
-          <a
-            href="mailto:samendran@gmail.com"
-            className="underline-offset-2 hover:text-ink hover:underline"
-          >
-            Get in touch
-          </a>
         </div>
       </div>
     </footer>

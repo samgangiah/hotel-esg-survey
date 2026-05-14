@@ -112,7 +112,7 @@ interface BounceAlertEmail {
   teamUrl: string | null;
 }
 
-const FROM_DEFAULT = "Hotel ESG Survey <invites@mail.digitalrain.cloud>";
+const FROM_DEFAULT = "PHS Energy <invites@mail.phsenergy.co.uk>";
 
 function getFrom(): string {
   return process.env.RESEND_FROM ?? FROM_DEFAULT;
@@ -230,7 +230,7 @@ function operatorLoginText({ magicLink }: OperatorLoginEmail) {
   return [
     "Hi,",
     "",
-    "Here's your one-time sign-in link for the Hotel Energy & ESG Survey platform admin console.",
+    "Here's your one-time sign-in link for the PHS Energy platform admin console.",
     "",
     magicLink,
     "",
@@ -293,7 +293,7 @@ function invitationText(args: InvitationEmail) {
     surveyPurposeText(args.siteName),
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -316,7 +316,7 @@ function invitationHtml(args: InvitationEmail) {
       ${magicLinkExplainerHtml("full")}
       ${surveyPurposeHtml(args.siteName)}
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
-        Thanks,<br/>Hotel Energy &amp; ESG Survey team
+        Thanks,<br/>PHS Energy team
       </p>
     `,
   });
@@ -360,7 +360,7 @@ function recoveryText(args: RecoveryEmail) {
     "If you didn't request this, you can safely ignore this email.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -383,7 +383,7 @@ function recoveryHtml(args: RecoveryEmail) {
       ${magicLinkExplainerHtml("brief")}
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
         If you didn't request this, you can safely ignore this email.<br/><br/>
-        Thanks,<br/>Hotel Energy &amp; ESG Survey team
+        Thanks,<br/>PHS Energy team
       </p>
     `,
   });
@@ -403,7 +403,7 @@ export async function sendWelcomeEmail(args: WelcomeEmail) {
   await resend.emails.send({
     from: getFrom(),
     to: args.to,
-    subject: `Welcome to the Hotel Energy & ESG Survey — set up ${args.operatorName}`,
+    subject: `Welcome to PHS Energy — set up ${args.operatorName}`,
     text: welcomeText(args),
     html: welcomeHtml(args),
   });
@@ -413,7 +413,7 @@ function welcomeText(args: WelcomeEmail) {
   return [
     `Hi ${args.toName.split(" ")[0] || args.toName},`,
     "",
-    `${args.inviterName} has set up an account for ${args.operatorName} on the Hotel Energy & ESG Survey platform.`,
+    `${args.inviterName} has set up an account for ${args.operatorName} on the PHS Energy platform.`,
     "",
     "You're the Operator Admin — the person who'll add your hotel(s), invite your team, and run the survey.",
     "",
@@ -432,7 +432,7 @@ function welcomeText(args: WelcomeEmail) {
     "Any questions, just reply to this email.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -471,8 +471,7 @@ function welcomeHtml(args: WelcomeEmail) {
         sustainability reporting. Your account is used only for that purpose.
       </p>
       <p style="font:400 13px/1.5 system-ui,-apple-system,sans-serif;color:#666;margin:16px 0 0">
-        Any questions, just reply to this email.<br/>Hotel Energy &amp; ESG
-        Survey team
+        Any questions, just reply to this email.<br/>PHS Energy team
       </p>
     `,
   });
@@ -545,7 +544,7 @@ function reminderText(args: ReminderEmail) {
     "Your progress is saved automatically.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -619,7 +618,7 @@ function delegationText(args: DelegationEmail) {
     "If you don't know the answer either, you can pass the question on to someone else from the same page.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -708,7 +707,7 @@ function delegationCompletedText(args: DelegationCompletedEmail) {
     args.surveyUrl,
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -762,7 +761,7 @@ function sectionSubmittedText(args: SectionSubmittedEmail) {
     args.progressUrl,
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -810,7 +809,7 @@ function allSectionsCompleteText(args: AllSectionsCompleteEmail) {
     args.reviewUrl,
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -866,7 +865,7 @@ function surveyClosedText(args: SurveyClosedEmail) {
     "If you think it was closed too soon, ask your Operator Admin to reopen it.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -921,7 +920,7 @@ function surveyReopenedText(args: SurveyReopenedEmail) {
     args.surveyUrl,
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -973,7 +972,7 @@ function delegationCancelledText(args: DelegationCancelledEmail) {
     "No action is needed from you. The link you received is no longer active.",
     "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ].join("\n");
 }
 
@@ -1029,7 +1028,7 @@ function bounceAlertText(args: BounceAlertEmail) {
     "The platform has stopped sending reminders and invitations to that address. To restore contact, ask them for a fresh email address and re-invite them.",
     args.teamUrl ? `\n  ${args.teamUrl}\n` : "",
     "Thanks,",
-    "Hotel Energy & ESG Survey team",
+    "PHS Energy team",
   ]
     .filter((l) => l !== "")
     .join("\n");
@@ -1059,7 +1058,7 @@ function bounceAlertHtml(args: BounceAlertEmail) {
 
 function baseHtml({ preheader, body }: { preheader: string; body: string }) {
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Hotel Energy &amp; ESG Survey</title></head>
+<html><head><meta charset="utf-8"><title>PHS Energy</title></head>
 <body style="margin:0;padding:0;background:#fafaf7;font:400 15px/1.5 system-ui,-apple-system,'Inter',Segoe UI,sans-serif;color:#1f2421">
   <span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0">${escapeHtml(preheader)}</span>
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#fafaf7">
@@ -1067,8 +1066,8 @@ function baseHtml({ preheader, body }: { preheader: string; body: string }) {
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:1px solid #e6e3da;border-radius:12px">
         <tr><td style="padding:32px">
           <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:20px">
-            <span style="display:inline-block;background:#2F5D50;color:#fff;width:28px;height:28px;border-radius:8px;text-align:center;line-height:28px;font:600 14px Georgia,serif">e</span>
-            <span style="font:600 14px system-ui,-apple-system,sans-serif;color:#1f2421">Hotel Energy &amp; ESG Survey</span>
+            <span style="display:inline-block;background:#2F5D50;color:#fff;width:28px;height:28px;border-radius:8px;text-align:center;line-height:28px;font:600 13px Georgia,serif">phs</span>
+            <span style="font:600 14px system-ui,-apple-system,sans-serif;color:#1f2421">PHS Energy</span>
           </div>
           ${body}
         </td></tr>

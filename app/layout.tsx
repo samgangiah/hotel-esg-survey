@@ -16,7 +16,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Hotel Energy & ESG Survey",
+  title: "PHS Energy",
   description:
     "A short diagnostic to identify energy waste and improvement opportunities.",
 };

@@ -17,8 +17,8 @@ export function AdminNav({ active }: { active: string }) {
           href="/admin"
           className="-ml-1 mr-4 flex items-center gap-2 py-3 font-display text-base text-ink"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-card bg-accent text-white text-xs">
-            esg
+          <span className="flex h-7 w-7 items-center justify-center rounded-card bg-accent text-white text-[10px] font-medium">
+            phs
           </span>
           <span className="hidden sm:inline">Platform admin</span>
         </Link>

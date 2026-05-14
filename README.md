@@ -1,8 +1,10 @@
-# Hotel Energy & ESG Survey — UI demo
+# PHS Energy
 
-A polished, browser-only survey demo for UK hotels. No backend, no persistence,
-no upload — `submit` shows a review screen. The form is rendered generically
-from `data/questions.json`.
+Hotel energy & ESG survey platform — invite-only, magic-link auth, multi-
+role respondents, file uploads, delegation, reports, reminders. Source for
+the app behind `app.phsenergy.co.uk` (marketing at `phsenergy.co.uk`).
+
+A browser-only preview of the survey itself is at `/demo`.
 
 ## Local dev
 

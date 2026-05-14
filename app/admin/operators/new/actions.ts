@@ -41,7 +41,7 @@ export async function addOperator(
     return { ok: false, error: "Operator Admin email looks invalid." };
 
   const template = await db.surveyTemplate.findFirst({
-    where: { slug: "hotel-energy" },
+    where: { slug: "phs-energy" },
     orderBy: { version: "desc" },
   });
   if (!template) {

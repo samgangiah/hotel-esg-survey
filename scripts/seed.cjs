@@ -1,5 +1,5 @@
 // Plain-CJS seed script that runs in the standalone runner image (no tsx needed).
-// Idempotent: skips if hotel-energy v1 already seeded.
+// Idempotent: skips if phs-energy v1 already seeded.
 
 const path = require("node:path");
 const { PrismaClient } = require("@prisma/client");
@@ -10,7 +10,7 @@ const questions = require(QUESTIONS_PATH);
 const db = new PrismaClient();
 
 (async () => {
-  const slug = "hotel-energy";
+  const slug = "phs-energy";
   const version = 1;
 
   // Upsert: on Phase 0 we treat v1 of the locked schema as a living draft so

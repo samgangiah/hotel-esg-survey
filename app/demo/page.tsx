@@ -4,7 +4,7 @@ import { DemoRouter } from "@/components/form/DemoRouter";
 import { formSpec } from "@/lib/form-data";
 
 export const metadata = {
-  title: "Demo · Hotel Energy & ESG Survey",
+  title: "Demo · PHS Energy",
   description: "Try the survey end-to-end — no sign-in, no data leaves your browser.",
 };
 
@@ -21,7 +21,7 @@ export default function DemoPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-card bg-accent text-white">
-              <span className="font-display text-base">e</span>
+              <span className="text-xs font-medium">phs</span>
             </div>
             <div>
               <p className="font-display text-lg leading-tight text-ink">

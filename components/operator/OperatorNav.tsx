@@ -21,8 +21,8 @@ export function OperatorNav({
     <nav className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 sm:px-6">
         <div className="-ml-1 mr-4 flex items-center gap-2 py-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-card bg-accent text-white text-xs">
-            esg
+          <span className="flex h-7 w-7 items-center justify-center rounded-card bg-accent text-white text-[10px] font-medium">
+            phs
           </span>
           <span className="hidden text-sm sm:inline">
             <span className="text-muted">Operator: </span>

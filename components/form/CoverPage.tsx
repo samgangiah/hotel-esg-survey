@@ -64,7 +64,7 @@ export function CoverPage({
         <header className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted">
-              Hotel Energy &amp; ESG Survey
+              PHS Energy
             </p>
             <h1 className="mt-2 font-display text-3xl text-ink sm:text-4xl">
               {cover.headline}

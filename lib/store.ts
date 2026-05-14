@@ -56,7 +56,7 @@ export const useFormStore = create<FormStore>()(
         set({ answers: {}, attemptedAdvance: {}, submittedSections: {} }),
     }),
     {
-      name: "hotel-esg-survey-demo",
+      name: "phs-energy-demo",
       // v0.4: localStorage (was sessionStorage) so close-tab → reopen the
       // original link on the same device restores progress. Penny's tested
       // scenario from 2026-05-11.

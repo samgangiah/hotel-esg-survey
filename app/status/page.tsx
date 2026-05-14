@@ -46,7 +46,7 @@ export default function StatusPage() {
             aria-hidden
           />
           <p className="text-xs uppercase tracking-wide text-muted">
-            Hotel ESG Survey — status
+            PHS Energy — status
           </p>
         </div>
         <h1 className="font-display text-3xl text-ink">{copy.headline}</h1>
