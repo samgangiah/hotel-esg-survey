@@ -1,12 +1,12 @@
 services:
-  esg-app:
+  phs-app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: esg-app
+    container_name: phs-app
     restart: unless-stopped
     depends_on:
-      esg-db:
+      phs-db:
         condition: service_healthy
     networks:
       - tunnel-network
@@ -14,23 +14,23 @@ services:
       # Respondent file uploads (energy bills, EPC, machine photos).
       # Host folder must be chowned to 1001:1001 (the `nextjs` container user)
       # so the app can write. Created during deploy.
-      - /opt/vps/data/esg-files:/app/uploads
+      - /opt/vps/data/phs-files:/app/uploads
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://esg:${POSTGRES_PASSWORD:-changeme}@esg-db:5432/esg?schema=public
+      - DATABASE_URL=postgresql://esg:${POSTGRES_PASSWORD:-changeme}@phs-db:5432/esg?schema=public
       - SESSION_SIGNING_KEY=${SESSION_SIGNING_KEY:-dev-only-change-in-prod}
       - PLATFORM_ADMIN_EMAIL=${PLATFORM_ADMIN_EMAIL:-${OPERATOR_EMAIL:-samendran@gmail.com}}
       - OPERATOR_EMAIL=${OPERATOR_EMAIL:-${PLATFORM_ADMIN_EMAIL:-samendran@gmail.com}}
-      - APP_URL=${APP_URL:-https://esg.digitalrain.cloud}
+      - APP_URL=${APP_URL:-https://phs.digitalstorm.cloud}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM=${RESEND_FROM:-}
       - RESEND_WEBHOOK_SECRET=${RESEND_WEBHOOK_SECRET:-}
       - UPLOADS_DIR=${UPLOADS_DIR:-/app/uploads}
       - CRON_SECRET=${CRON_SECRET:-}
 
-  esg-db:
+  phs-db:
     image: postgres:16-alpine
-    container_name: esg-db
+    container_name: phs-db
     restart: unless-stopped
     networks:
       - tunnel-network
