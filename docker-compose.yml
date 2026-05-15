@@ -39,7 +39,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - POSTGRES_DB=esg
     volumes:
-      - esg-db-data:/var/lib/postgresql/data
+      - phs-db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U esg -d esg"]
       interval: 5s
@@ -47,8 +47,8 @@ services:
       retries: 10
 
 volumes:
-  esg-db-data:
-    name: esg-db-data
+  phs-db-data:
+    name: phs-db-data
 
 networks:
   tunnel-network:
