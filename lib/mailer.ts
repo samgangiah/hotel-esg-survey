@@ -3,6 +3,7 @@
 // are provisioned). Same call signatures in both modes.
 
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 interface OperatorLoginEmail {
   email: string;
@@ -126,6 +127,65 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
+// SMTP transport — optional middle tier between Resend and the stub.
+// Enable by setting SMTP_HOST in /opt/vps/projects/phs/.env. Typical Gmail config:
+//
+//   SMTP_HOST=smtp.gmail.com
+//   SMTP_PORT=587
+//   SMTP_USER=you@gmail.com
+//   SMTP_PASS=<16-char Gmail App Password>
+//   SMTP_FROM=PHS Energy <you@gmail.com>
+//
+// Gmail rewrites the From header to match the authenticated user, so
+// SMTP_FROM's address part must equal SMTP_USER (the display name is free).
+
+let smtpTransport: nodemailer.Transporter | null = null;
+function getSmtp(): nodemailer.Transporter | null {
+  const host = process.env.SMTP_HOST;
+  if (!host) return null;
+  if (!smtpTransport) {
+    const port = parseInt(process.env.SMTP_PORT ?? "587", 10);
+    smtpTransport = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: process.env.SMTP_USER
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" }
+        : undefined,
+    });
+  }
+  return smtpTransport;
+}
+
+function smtpFrom(): string {
+  return process.env.SMTP_FROM || process.env.SMTP_USER || getFrom();
+}
+
+interface MailPayload {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}
+
+/**
+ * Try real transports in priority order. Returns true if sent.
+ * Resend wins when both are configured; SMTP is the dev/test fallback.
+ */
+async function dispatch(payload: MailPayload): Promise<boolean> {
+  const resend = getResend();
+  if (resend) {
+    await resend.emails.send({ from: getFrom(), ...payload });
+    return true;
+  }
+  const smtp = getSmtp();
+  if (smtp) {
+    await smtp.sendMail({ from: smtpFrom(), ...payload });
+    return true;
+  }
+  return false;
+}
+
 const banner = (title: string) =>
   `\n${"=".repeat(64)}\n📧 [STUB MAILER] ${title}\n${"=".repeat(64)}`;
 
@@ -208,22 +268,17 @@ function surveyPurposeHtml(siteName: string): string {
 // --- Operator (Platform Admin) login link ----------------------------------
 
 export async function sendOperatorLoginEmail(args: OperatorLoginEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner("Operator login link"));
-    console.log(`To:   ${args.email}`);
-    console.log(`Link: ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.email,
     subject: "Your platform admin sign-in link",
     text: operatorLoginText(args),
     html: operatorLoginHtml(args),
-  });
+  })) return;
+
+  console.log(banner("Operator login link"));
+  console.log(`To:   ${args.email}`);
+  console.log(`Link: ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function operatorLoginText({ magicLink }: OperatorLoginEmail) {
@@ -257,24 +312,19 @@ function operatorLoginHtml({ magicLink }: OperatorLoginEmail) {
 // --- Survey invitation (for Operator Admins + their team members) ----------
 
 export async function sendInvitationEmail(args: InvitationEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Survey invitation — ${args.siteName}`));
-    console.log(`To:    ${args.toName} <${args.to}>`);
-    console.log(`From:  ${args.inviterName}`);
-    console.log(`Role:  ${args.roleLabel}`);
-    console.log(`Link:  ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `${args.inviterName} has asked you to take an energy survey for ${args.siteName}`,
     text: invitationText(args),
     html: invitationHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Survey invitation — ${args.siteName}`));
+  console.log(`To:    ${args.toName} <${args.to}>`);
+  console.log(`From:  ${args.inviterName}`);
+  console.log(`Role:  ${args.roleLabel}`);
+  console.log(`Link:  ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function invitationText(args: InvitationEmail) {
@@ -325,23 +375,18 @@ function invitationHtml(args: InvitationEmail) {
 // --- Self-service recovery (lost-link replacement) -------------------------
 
 export async function sendRecoveryEmail(args: RecoveryEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Recovery link — ${args.siteName}`));
-    console.log(`To:    ${args.toName} <${args.to}>`);
-    console.log(`Role:  ${args.roleLabel}`);
-    console.log(`Link:  ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Your fresh survey link for ${args.siteName}`,
     text: recoveryText(args),
     html: recoveryHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Recovery link — ${args.siteName}`));
+  console.log(`To:    ${args.toName} <${args.to}>`);
+  console.log(`Role:  ${args.roleLabel}`);
+  console.log(`Link:  ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function recoveryText(args: RecoveryEmail) {
@@ -392,21 +437,17 @@ function recoveryHtml(args: RecoveryEmail) {
 // --- Welcome email (first-time Operator Admin from /admin) -----------------
 
 export async function sendWelcomeEmail(args: WelcomeEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Welcome — ${args.operatorName}`));
-    console.log(`To:    ${args.toName} <${args.to}>`);
-    console.log(`Link:  ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Welcome to PHS Energy — set up ${args.operatorName}`,
     text: welcomeText(args),
     html: welcomeHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Welcome — ${args.operatorName}`));
+  console.log(`To:    ${args.toName} <${args.to}>`);
+  console.log(`Link:  ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function welcomeText(args: WelcomeEmail) {
@@ -486,23 +527,18 @@ const REMINDER_SUBJECTS: Record<1 | 2 | 3, string> = {
 };
 
 export async function sendReminderEmail(args: ReminderEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Reminder tier ${args.tier} — ${args.siteName}`));
-    console.log(`To:    ${args.toName} <${args.to}>`);
-    console.log(`Role:  ${args.roleLabel}`);
-    console.log(`Link:  ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: REMINDER_SUBJECTS[args.tier],
     text: reminderText(args),
     html: reminderHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Reminder tier ${args.tier} — ${args.siteName}`));
+  console.log(`To:    ${args.toName} <${args.to}>`);
+  console.log(`Role:  ${args.roleLabel}`);
+  console.log(`Link:  ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function reminderBodyText(tier: 1 | 2 | 3, siteName: string): string {
@@ -575,24 +611,20 @@ function reminderHtml(args: ReminderEmail) {
 // --- Question delegation ---------------------------------------------------
 
 export async function sendDelegationEmail(args: DelegationEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Delegation — ${args.siteName}`));
-    console.log(`To:        ${args.toName ?? "(no name)"} <${args.to}>`);
-    console.log(`From:      ${args.delegatorName}`);
-    console.log(`Question:  ${args.questionLabel}`);
-    if (args.note) console.log(`Note:      ${args.note}`);
-    console.log(`Link:      ${args.magicLink}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `${args.delegatorName} needs your input on one question — ${args.siteName}`,
     text: delegationText(args),
     html: delegationHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Delegation — ${args.siteName}`));
+  console.log(`To:        ${args.toName ?? "(no name)"} <${args.to}>`);
+  console.log(`From:      ${args.delegatorName}`);
+  console.log(`Question:  ${args.questionLabel}`);
+  if (args.note) console.log(`Note:      ${args.note}`);
+  console.log(`Link:      ${args.magicLink}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function delegationText(args: DelegationEmail) {
@@ -675,23 +707,19 @@ function delegationHtml(args: DelegationEmail) {
 }
 
 export async function sendDelegationCompletedEmail(args: DelegationCompletedEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Delegation answered — ${args.siteName}`));
-    console.log(`To:        ${args.toName} <${args.to}>`);
-    console.log(`Answered:  ${args.questionLabel}`);
-    console.log(`By:        ${args.delegateEmail}`);
-    console.log(`Survey:    ${args.surveyUrl}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `${args.delegateEmail} answered the question you delegated`,
     text: delegationCompletedText(args),
     html: delegationCompletedHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Delegation answered — ${args.siteName}`));
+  console.log(`To:        ${args.toName} <${args.to}>`);
+  console.log(`Answered:  ${args.questionLabel}`);
+  console.log(`By:        ${args.delegateEmail}`);
+  console.log(`Survey:    ${args.surveyUrl}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function delegationCompletedText(args: DelegationCompletedEmail) {
@@ -732,23 +760,19 @@ function delegationCompletedHtml(args: DelegationCompletedEmail) {
 // --- Progress events: section submitted, all sections complete ------------
 
 export async function sendSectionSubmittedEmail(args: SectionSubmittedEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Section submitted — ${args.siteName}`));
-    console.log(`To:        ${args.toName} <${args.to}>`);
-    console.log(`Submitter: ${args.submitterName}`);
-    console.log(`Section:   ${args.sectionTitle}`);
-    console.log(`Progress:  ${args.progressUrl}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `${args.submitterName} submitted: ${args.sectionTitle} — ${args.siteName}`,
     text: sectionSubmittedText(args),
     html: sectionSubmittedHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Section submitted — ${args.siteName}`));
+  console.log(`To:        ${args.toName} <${args.to}>`);
+  console.log(`Submitter: ${args.submitterName}`);
+  console.log(`Section:   ${args.sectionTitle}`);
+  console.log(`Progress:  ${args.progressUrl}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function sectionSubmittedText(args: SectionSubmittedEmail) {
@@ -782,21 +806,17 @@ function sectionSubmittedHtml(args: SectionSubmittedEmail) {
 }
 
 export async function sendAllSectionsCompleteEmail(args: AllSectionsCompleteEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`All sections complete — ${args.siteName}`));
-    console.log(`To:     ${args.toName} <${args.to}>`);
-    console.log(`Review: ${args.reviewUrl}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Your team has finished the energy survey for ${args.siteName}`,
     text: allSectionsCompleteText(args),
     html: allSectionsCompleteHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`All sections complete — ${args.siteName}`));
+  console.log(`To:     ${args.toName} <${args.to}>`);
+  console.log(`Review: ${args.reviewUrl}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function allSectionsCompleteText(args: AllSectionsCompleteEmail) {
@@ -835,22 +855,18 @@ function allSectionsCompleteHtml(args: AllSectionsCompleteEmail) {
 // --- Survey lifecycle: closed, reopened ------------------------------------
 
 export async function sendSurveyClosedEmail(args: SurveyClosedEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Survey closed — ${args.siteName}`));
-    console.log(`To:     ${args.toName} <${args.to}>`);
-    console.log(`Closed: by ${args.closedByName}`);
-    console.log(`Review: ${args.reviewUrl}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Energy survey for ${args.siteName} is now closed`,
     text: surveyClosedText(args),
     html: surveyClosedHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Survey closed — ${args.siteName}`));
+  console.log(`To:     ${args.toName} <${args.to}>`);
+  console.log(`Closed: by ${args.closedByName}`);
+  console.log(`Review: ${args.reviewUrl}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function surveyClosedText(args: SurveyClosedEmail) {
@@ -892,22 +908,18 @@ function surveyClosedHtml(args: SurveyClosedEmail) {
 }
 
 export async function sendSurveyReopenedEmail(args: SurveyReopenedEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Survey reopened — ${args.siteName}`));
-    console.log(`To:       ${args.toName} <${args.to}>`);
-    console.log(`Reopened: by ${args.reopenedByName}`);
-    console.log(`Survey:   ${args.surveyUrl}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Energy survey for ${args.siteName} is open again`,
     text: surveyReopenedText(args),
     html: surveyReopenedHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Survey reopened — ${args.siteName}`));
+  console.log(`To:       ${args.toName} <${args.to}>`);
+  console.log(`Reopened: by ${args.reopenedByName}`);
+  console.log(`Survey:   ${args.surveyUrl}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function surveyReopenedText(args: SurveyReopenedEmail) {
@@ -943,21 +955,17 @@ function surveyReopenedHtml(args: SurveyReopenedEmail) {
 // --- Delegation cancelled --------------------------------------------------
 
 export async function sendDelegationCancelledEmail(args: DelegationCancelledEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Delegation cancelled — ${args.siteName}`));
-    console.log(`To:       ${args.toName ?? "(no name)"} <${args.to}>`);
-    console.log(`Question: ${args.questionLabel}`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `${args.delegatorName} no longer needs your input on that question`,
     text: delegationCancelledText(args),
     html: delegationCancelledHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Delegation cancelled — ${args.siteName}`));
+  console.log(`To:       ${args.toName ?? "(no name)"} <${args.to}>`);
+  console.log(`Question: ${args.questionLabel}`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function delegationCancelledText(args: DelegationCancelledEmail) {
@@ -1002,21 +1010,17 @@ function delegationCancelledHtml(args: DelegationCancelledEmail) {
 // --- Bounce alert (Resend webhook) ----------------------------------------
 
 export async function sendBounceAlertEmail(args: BounceAlertEmail) {
-  const resend = getResend();
-  if (!resend) {
-    console.log(banner(`Bounce alert — ${args.operatorName}`));
-    console.log(`To:       ${args.toName} <${args.to}>`);
-    console.log(`Bounced:  ${args.bouncedRespondentName} <${args.bouncedEmail}>`);
-    console.log(`${"=".repeat(64)}\n`);
-    return;
-  }
-  await resend.emails.send({
-    from: getFrom(),
+  if (await dispatch({
     to: args.to,
     subject: `Email to ${args.bouncedEmail} is bouncing`,
     text: bounceAlertText(args),
     html: bounceAlertHtml(args),
-  });
+  })) return;
+
+  console.log(banner(`Bounce alert — ${args.operatorName}`));
+  console.log(`To:       ${args.toName} <${args.to}>`);
+  console.log(`Bounced:  ${args.bouncedRespondentName} <${args.bouncedEmail}>`);
+  console.log(`${"=".repeat(64)}\n`);
 }
 
 function bounceAlertText(args: BounceAlertEmail) {
