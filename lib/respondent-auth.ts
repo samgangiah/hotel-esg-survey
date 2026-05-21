@@ -40,10 +40,19 @@ export async function getRespondent(): Promise<RespondentAuth | null> {
 }
 
 /**
- * Page-friendly variant — redirects to / if no valid session.
+ * Page-friendly variant — redirects to /recover if no valid session.
+ *
+ * /recover is the right landing for unauthenticated respondents because:
+ *  - they HAD an invitation (otherwise they wouldn't be deep-linking here)
+ *  - they can self-serve a fresh magic link to their email
+ *  - sending them to the marketing landing instead just confuses them
+ *
+ * The flow becomes: click email link on a phone with no session → land on
+ * /recover → enter email → get fresh link → click → land in survey. Much
+ * better than dumping them on the marketing page with no path forward.
  */
 export async function requireRespondent(): Promise<RespondentAuth> {
   const me = await getRespondent();
-  if (!me) redirect("/");
+  if (!me) redirect("/recover");
   return me;
 }

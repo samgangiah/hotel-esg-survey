@@ -16,12 +16,14 @@ export interface OperatorAdminAuth {
  * (`isOperatorAdmin === true`). Server-only. Used by all `/operator/*` pages
  * except the magic-link landing.
  *
- * Redirects to / if there is no valid respondent session, or to /survey if
- * the respondent is not an Operator Admin (their portal is the survey itself).
+ * Redirects to /recover if there is no valid respondent session (so the
+ * operator admin can self-serve a fresh magic link when deep-linking from an
+ * email on a phone with no session). Redirects to /survey if the respondent
+ * is not an Operator Admin (their portal is the survey itself).
  */
 export async function requireOperatorAdmin(): Promise<OperatorAdminAuth> {
   const sessionId = await getRespondentSessionId();
-  if (!sessionId) redirect("/");
+  if (!sessionId) redirect("/recover");
 
   const session = await db.session.findUnique({
     where: { id: sessionId },
@@ -29,7 +31,7 @@ export async function requireOperatorAdmin(): Promise<OperatorAdminAuth> {
       respondent: { include: { operator: true } },
     },
   });
-  if (!session || session.expiresAt < new Date()) redirect("/");
+  if (!session || session.expiresAt < new Date()) redirect("/recover");
 
   if (!session.respondent.isOperatorAdmin) {
     redirect("/survey");
