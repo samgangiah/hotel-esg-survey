@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getRespondentSessionId } from "@/lib/auth/session";
+import { recoverUrl } from "@/lib/respondent-auth";
 
 export interface OperatorAdminAuth {
   sessionId: string;
@@ -23,7 +24,7 @@ export interface OperatorAdminAuth {
  */
 export async function requireOperatorAdmin(): Promise<OperatorAdminAuth> {
   const sessionId = await getRespondentSessionId();
-  if (!sessionId) redirect("/recover");
+  if (!sessionId) redirect(await recoverUrl());
 
   const session = await db.session.findUnique({
     where: { id: sessionId },
@@ -31,7 +32,7 @@ export async function requireOperatorAdmin(): Promise<OperatorAdminAuth> {
       respondent: { include: { operator: true } },
     },
   });
-  if (!session || session.expiresAt < new Date()) redirect("/recover");
+  if (!session || session.expiresAt < new Date()) redirect(await recoverUrl());
 
   if (!session.respondent.isOperatorAdmin) {
     redirect("/survey");

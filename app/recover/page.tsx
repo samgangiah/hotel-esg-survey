@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { requestRecovery } from "./actions";
 
 export const metadata = { title: "Recover your survey link" };
@@ -13,20 +14,26 @@ export const dynamic = "force-dynamic";
  * invitations on your assignments and email you a fresh link. The response
  * page is the same regardless of whether the email is on file, so attackers
  * can't enumerate registered respondents.
+ *
+ * `?next=` (set when an unauthenticated user deep-linked into a gated page)
+ * is carried through to requestRecovery, which stamps it on the fresh
+ * invitation so /r/[token] can land the user exactly where they were headed.
  */
 export default async function RecoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; email?: string }>;
+  searchParams: Promise<{ sent?: string; email?: string; next?: string }>;
 }) {
   const sp = await searchParams;
   const sent = sp.sent === "1";
   const prefillEmail = typeof sp.email === "string" ? sp.email : "";
+  const next = safeNextPath(typeof sp.next === "string" ? sp.next : null);
 
   async function submit(formData: FormData) {
     "use server";
     const email = String(formData.get("email") ?? "");
-    await requestRecovery(email);
+    const nextField = String(formData.get("next") ?? "");
+    await requestRecovery(email, nextField || null);
     redirect("/recover?sent=1");
   }
 
@@ -78,6 +85,7 @@ export default async function RecoverPage({
                 placeholder="you@example.com"
               />
             </div>
+            {next && <input type="hidden" name="next" value={next} />}
             <Button type="submit" size="lg" className="w-full">
               Email me a fresh link
             </Button>

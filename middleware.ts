@@ -12,10 +12,19 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const path = url.pathname;
 
+  // Forward the requested path+search as a request header so server
+  // components (the auth helpers) can read it — they otherwise have no
+  // access to the current URL. Used to build the ?next= redirect target
+  // when an unauthenticated user deep-links into a gated page.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", path + url.search);
+  const pass = () =>
+    NextResponse.next({ request: { headers: requestHeaders } });
+
   // Platform admin portal: gated except for the login + verify entry points.
   if (path.startsWith("/admin")) {
     if (path === "/admin/login" || path.startsWith("/admin/verify")) {
-      return NextResponse.next();
+      return pass();
     }
     const cookie = req.cookies.get(ADMIN_COOKIE)?.value;
     if (!cookie || !(await isSignatureValid(cookie))) {
@@ -26,11 +35,11 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return pass();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/survey/:path*", "/operator/:path*"],
 };
 
 // --- Edge-compatible HMAC verification (Web Crypto, not Node crypto) -------

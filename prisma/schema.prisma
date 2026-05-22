@@ -301,6 +301,13 @@ model Invitation {
   remindersSent  Int       @default(0)
   lastReminderAt DateTime?
 
+  // Post-sign-in destination. Set when this invitation was minted via the
+  // /recover flow that originated from a deep link (e.g. a "view their
+  // answer" email). After the magic link is confirmed, /r/[token] sends the
+  // respondent here instead of the generic resolver. Always a validated
+  // same-origin path (starts with "/").
+  nextPath       String?
+
   assignment   Assignment   @relation(fields: [assignmentId], references: [id])
   boundSession Session?     @relation("InvitationBinding", fields: [boundSessionId], references: [id])
   emailEvents  EmailEvent[]

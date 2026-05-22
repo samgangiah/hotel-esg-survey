@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { getRespondentSessionId } from "@/lib/auth/session";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 export interface RespondentAuth {
   sessionId: string;
@@ -8,6 +10,23 @@ export interface RespondentAuth {
   email: string;
   name: string;
   isOperatorAdmin: boolean;
+}
+
+/**
+ * Build the /recover URL, carrying a `?next=` hop back to the page the
+ * caller was trying to reach (read from the x-pathname header the
+ * middleware sets). After the respondent recovers + signs in, /r/[token]
+ * sends them straight there.
+ */
+export async function recoverUrl(): Promise<string> {
+  try {
+    const h = await headers();
+    const next = safeNextPath(h.get("x-pathname"));
+    if (next) return `/recover?next=${encodeURIComponent(next)}`;
+  } catch {
+    // headers() unavailable outside a request scope — fall through.
+  }
+  return "/recover";
 }
 
 /**
@@ -53,6 +72,6 @@ export async function getRespondent(): Promise<RespondentAuth | null> {
  */
 export async function requireRespondent(): Promise<RespondentAuth> {
   const me = await getRespondent();
-  if (!me) redirect("/recover");
+  if (!me) redirect(await recoverUrl());
   return me;
 }

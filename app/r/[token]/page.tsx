@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/auth/tokens";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { confirmIdentity, denyIdentity } from "./actions";
 
 export const metadata = { title: "Survey access" };
@@ -52,12 +53,17 @@ export default async function MagicLinkPage({
   const site = a.surveyInstance.site;
 
   const isOperatorAdmin = r.isOperatorAdmin;
+  // If this invitation was minted via /recover from a deep link, land the
+  // respondent exactly where they were headed. Re-validate the stored path.
+  // Otherwise: Operator Admins → their portal, everyone else → the survey.
+  const destination =
+    safeNextPath(invitation.nextPath) ??
+    (isOperatorAdmin ? "/operator" : "/survey");
   async function yes() {
     "use server";
     const result = await confirmIdentity(token);
     if (!result.ok) redirect(`/r/${token}?err=${encodeURIComponent(result.error)}`);
-    // Operator Admins go to their portal; everyone else lands on the survey.
-    redirect(isOperatorAdmin ? "/operator" : "/survey");
+    redirect(destination);
   }
   async function no() {
     "use server";

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { newToken } from "@/lib/auth/tokens";
 import { sendRecoveryEmail } from "@/lib/mailer";
 import { audit } from "@/lib/audit";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -22,9 +23,13 @@ const RATE_LIMIT_COUNT = 3;
  * by counting recent `recovery.requested` rows for that email.
  */
 export async function requestRecovery(
-  rawEmail: string
+  rawEmail: string,
+  rawNext?: string | null
 ): Promise<{ ok: true }> {
   const email = (rawEmail ?? "").trim().toLowerCase();
+  // Post-sign-in destination, if this recovery came from a deep link.
+  // Re-validated here — never trust a path that's travelled through a form.
+  const nextPath = safeNextPath(rawNext);
 
   // Audit + rate-limit even on empty input so we don't leak timing.
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -108,6 +113,7 @@ export async function requestRecovery(
           assignmentId: a.id,
           tokenHash: hash,
           expiresAt: new Date(Date.now() + FOURTEEN_DAYS_MS),
+          nextPath,
         },
       });
 
