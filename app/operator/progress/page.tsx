@@ -78,6 +78,8 @@ export default async function ProgressPage() {
           </p>
         </header>
 
+        <Legend />
+
         {buildings.length === 0 ? (
           <Card className="p-6 text-sm text-muted">No buildings yet.</Card>
         ) : (
@@ -175,6 +177,77 @@ function CellEmpty() {
     <span className="inline-flex items-center gap-1 text-xs text-muted/70">
       <Circle className="h-3 w-3" /> unassigned
     </span>
+  );
+}
+
+/**
+ * Key explaining the cell colours. The grid conveys status by colour alone,
+ * which isn't self-explanatory — this legend makes it readable at a glance.
+ */
+function Legend() {
+  const items: Array<{
+    icon: React.ElementType;
+    swatch: string;
+    label: string;
+    desc: string;
+  }> = [
+    {
+      icon: Circle,
+      swatch: "border-line bg-white text-muted",
+      label: "Invited",
+      desc: "Link sent, not opened yet",
+    },
+    {
+      icon: CirclePlay,
+      swatch: "border-amber-300/60 bg-amber-50/60 text-amber-700",
+      label: "In progress",
+      desc: "Opened, still filling it in",
+    },
+    {
+      icon: CircleCheck,
+      swatch: "border-accent/40 bg-accent-soft text-accent-deep",
+      label: "Submitted",
+      desc: "Marked their section done",
+    },
+    {
+      icon: CircleAlert,
+      swatch: "border-danger/40 bg-danger/10 text-danger",
+      label: "Abandoned",
+      desc: "Flagged as not continuing",
+    },
+  ];
+  return (
+    <Card className="mb-4 flex flex-wrap gap-x-6 gap-y-3 px-5 py-4">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted">
+        Key
+      </span>
+      {items.map((it) => {
+        const Icon = it.icon;
+        return (
+          <span key={it.label} className="flex items-center gap-2">
+            <span
+              className={cn(
+                "flex h-5 w-5 items-center justify-center rounded-control border",
+                it.swatch
+              )}
+            >
+              <Icon className="h-3 w-3" />
+            </span>
+            <span className="text-xs">
+              <span className="font-medium text-ink">{it.label}</span>
+              <span className="text-muted"> — {it.desc}</span>
+            </span>
+          </span>
+        );
+      })}
+      <span className="flex items-center gap-2">
+        <Circle className="h-3 w-3 text-muted/70" />
+        <span className="text-xs">
+          <span className="font-medium text-ink">unassigned</span>
+          <span className="text-muted"> — no one in this building × role</span>
+        </span>
+      </span>
+    </Card>
   );
 }
 

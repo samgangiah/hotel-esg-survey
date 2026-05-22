@@ -9,8 +9,8 @@
     "coverPage": {
       "headline": "Welcome to PHS Energy",
       "intro": [
-        "Thank you for taking the time to fill this in. The purpose of the survey is to understand your energy consumption and savings opportunities across two areas of the hotel: Guest Rooms and Laundry.",
-        "Please answer the questions as best as you can."
+        "Thank you for taking the time to fill this in. The purpose of the survey is to understand your hotel's energy consumption and identify savings opportunities.",
+        "You'll only be asked about the areas relevant to you. Please answer the questions as best as you can."
       ],
       "pointersHeading": "A few pointers",
       "tips": [
@@ -132,7 +132,7 @@
               "id": "general_monthly_consumption_table",
               "type": "table",
               "label": "Total energy consumption by month over the last 12 months",
-              "help": "Enter kWh figures where you have them. Leave blank where you don't — anything you can give helps.",
+              "help": "If you've uploaded all your energy bills above, you can skip this table — we'll read the figures from the bills. Otherwise, enter kWh figures where you have them and leave the rest blank.",
               "rows": [
                 {
                   "id": "jan",
