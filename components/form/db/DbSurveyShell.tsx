@@ -6,7 +6,7 @@ import { Lock } from "lucide-react";
 import { Wizard } from "../Wizard";
 import { CoverPage } from "../CoverPage";
 import { DbFormBackendProvider } from "../backends/DbBackend";
-import type { DelegationView } from "../state-context";
+import type { AnsweredBy, DelegationView } from "../state-context";
 import type { Answers, FormSpec } from "@/lib/schema";
 
 /**
@@ -18,6 +18,7 @@ export function DbSurveyShell({
   instanceId,
   spec,
   initialAnswers,
+  initialAnsweredBy,
   initialSubmittedSections,
   initialDelegations,
   respondentName,
@@ -30,6 +31,7 @@ export function DbSurveyShell({
   instanceId: string;
   spec: FormSpec;
   initialAnswers: Answers;
+  initialAnsweredBy: AnsweredBy;
   initialSubmittedSections: Record<string, boolean>;
   initialDelegations: Record<string, DelegationView>;
   respondentName: string;
@@ -94,8 +96,10 @@ export function DbSurveyShell({
       <DbFormBackendProvider
         instanceId={instanceId}
         initialAnswers={initialAnswers}
+        initialAnsweredBy={initialAnsweredBy}
         initialSubmittedSections={initialSubmittedSections}
         initialDelegations={initialDelegations}
+        respondentName={respondentName}
       >
         <Suspense fallback={null}>
           {showCoverByDefault ? (

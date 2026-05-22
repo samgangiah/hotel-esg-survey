@@ -209,8 +209,18 @@ export default async function OperatorDashboard() {
                   )}
                   <span className="ml-2 text-xs text-muted">{r.email}</span>
                 </span>
-                <span className="text-xs text-muted">
-                  {distinctRoles(r.assignments).join(", ") || "—"}
+                <span className="flex items-baseline gap-3">
+                  <span className="text-xs text-muted">
+                    {distinctRoles(r.assignments).join(", ") || "—"}
+                  </span>
+                  {!r.isOperatorAdmin && (
+                    <Link
+                      href="/operator/team"
+                      className="inline-flex items-center gap-1 text-xs text-accent-deep hover:text-accent"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Link>
+                  )}
                 </span>
               </div>
             ))}

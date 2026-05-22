@@ -6,6 +6,13 @@ import type { AnswerValue, Answers } from "@/lib/schema";
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
 /**
+ * Who answered each question, keyed by question id. Surfaced so the renderer
+ * can show a "answered by Hayley" byline — the survey is shared across the
+ * team, so it helps to see who filled what.
+ */
+export type AnsweredBy = Record<string, { name: string }>;
+
+/**
  * Per-question delegation state surfaced to the renderer. Keyed by question
  * id. Each entry describes the currently-active delegation: who it was sent
  * to, whether it's answered, and the chain context.
@@ -51,6 +58,11 @@ export interface FormBackend {
   delegations: Record<string, DelegationView>;
   /** True if the current respondent is allowed to delegate (i.e. signed in). */
   canDelegate: boolean;
+  /**
+   * Who answered each question. Set in DB mode (shared survey); empty in
+   * demo. Drives the "answered by X" byline.
+   */
+  answeredBy: AnsweredBy;
 
   setAnswer: (id: string, value: AnswerValue) => void;
   clearAnswer: (id: string) => void;

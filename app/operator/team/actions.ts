@@ -164,6 +164,200 @@ export async function inviteRespondent(
   return { ok: true, email: args.email };
 }
 
+/**
+ * Edit an existing team member's roles + building scope. Reconciles the
+ * Assignment rows: creates the newly-wanted ones, deletes the no-longer-
+ * wanted ones, and repoints the respondent's invitations onto a surviving
+ * assignment so the magic link keeps working.
+ *
+ * Answers are NOT touched — they're keyed by (instance, question, building),
+ * never by assignment — so changing someone's roles never loses data.
+ */
+export async function updateRespondentRoles(args: {
+  respondentId: string;
+  roles: string[];
+  buildingIds: string[]; // empty = all buildings
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireOperatorAdmin();
+
+  if (args.roles.length === 0)
+    return { ok: false, error: "Pick at least one role." };
+
+  const respondent = await db.respondent.findUnique({
+    where: { id: args.respondentId },
+  });
+  if (!respondent || respondent.deletedAt)
+    return { ok: false, error: "Team member not found." };
+  if (respondent.operatorId !== me.operatorId)
+    return { ok: false, error: "Not your operator." };
+  if (respondent.isOperatorAdmin)
+    return {
+      ok: false,
+      error: "The Operator Admin's access can't be edited here.",
+    };
+
+  const operator = await db.operator.findUnique({
+    where: { id: me.operatorId },
+    include: {
+      sites: {
+        where: { deletedAt: null },
+        include: {
+          surveyInstances: { orderBy: { createdAt: "desc" }, take: 1 },
+          buildings: { where: { deletedAt: null } },
+        },
+      },
+    },
+  });
+  if (!operator) return { ok: false, error: "Operator not found." };
+
+  const operatorBuildingIds = new Set(
+    operator.sites.flatMap((s) => s.buildings.map((b) => b.id))
+  );
+  for (const bid of args.buildingIds) {
+    if (!operatorBuildingIds.has(bid))
+      return { ok: false, error: "Unknown building." };
+  }
+
+  const buildingToInstance = new Map<string, string>();
+  for (const s of operator.sites) {
+    const inst = s.surveyInstances[0];
+    if (!inst) continue;
+    for (const b of s.buildings) buildingToInstance.set(b.id, inst.id);
+  }
+
+  const targetBuildingIds =
+    args.buildingIds.length > 0
+      ? args.buildingIds
+      : Array.from(operatorBuildingIds);
+  if (targetBuildingIds.length === 0)
+    return { ok: false, error: "No buildings exist on this operator." };
+
+  // Desired assignment key = instance|role|building (sectionId always "all").
+  const desired = new Set<string>();
+  for (const role of args.roles) {
+    for (const buildingId of targetBuildingIds) {
+      const instanceId = buildingToInstance.get(buildingId);
+      if (!instanceId) continue;
+      desired.add(`${instanceId}|${role}|${buildingId}`);
+    }
+  }
+  if (desired.size === 0)
+    return { ok: false, error: "No survey instance for those buildings." };
+
+  try {
+    await db.$transaction(async (tx) => {
+      const existing = await tx.assignment.findMany({
+        where: {
+          respondentId: respondent.id,
+          surveyInstance: { site: { operatorId: me.operatorId } },
+        },
+      });
+      const keyOf = (a: { surveyInstanceId: string; role: string; buildingId: string | null }) =>
+        `${a.surveyInstanceId}|${a.role}|${a.buildingId ?? ""}`;
+
+      // Create the newly-wanted assignments.
+      const survivors: string[] = [];
+      for (const a of existing) {
+        if (desired.has(keyOf(a))) survivors.push(a.id);
+      }
+      for (const key of desired) {
+        const [surveyInstanceId, role, buildingId] = key.split("|");
+        if (existing.some((a) => keyOf(a) === key)) continue;
+        const created = await tx.assignment.create({
+          data: {
+            surveyInstanceId,
+            respondentId: respondent.id,
+            role,
+            sectionId: "all",
+            buildingId,
+          },
+        });
+        survivors.push(created.id);
+      }
+
+      const toDelete = existing.filter((a) => !desired.has(keyOf(a)));
+      if (toDelete.length > 0 && survivors.length > 0) {
+        // Repoint any invitations off the doomed assignments first — the FK
+        // would otherwise block the delete.
+        await tx.invitation.updateMany({
+          where: { assignmentId: { in: toDelete.map((a) => a.id) } },
+          data: { assignmentId: survivors[0] },
+        });
+        await tx.assignment.deleteMany({
+          where: { id: { in: toDelete.map((a) => a.id) } },
+        });
+      }
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Update failed.",
+    };
+  }
+
+  await audit({
+    actorType: "respondent",
+    actorId: me.respondentId,
+    action: "respondent.rolesUpdated",
+    targetType: "Respondent",
+    targetId: respondent.id,
+    payload: { roles: args.roles, buildingIds: targetBuildingIds },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Remove a team member from the operator's survey — soft-delete. Their
+ * answers stay (they're part of the survey record); their sessions and
+ * invitations are expired so they can no longer sign in.
+ */
+export async function removeRespondent(
+  respondentId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireOperatorAdmin();
+
+  const respondent = await db.respondent.findUnique({
+    where: { id: respondentId },
+  });
+  if (!respondent || respondent.deletedAt)
+    return { ok: false, error: "Team member not found." };
+  if (respondent.operatorId !== me.operatorId)
+    return { ok: false, error: "Not your operator." };
+  if (respondent.isOperatorAdmin)
+    return { ok: false, error: "Operator Admins can't be removed here." };
+  if (respondent.id === me.respondentId)
+    return { ok: false, error: "You can't remove yourself." };
+
+  const now = new Date();
+  const epoch = new Date(0);
+  await db.$transaction([
+    db.respondent.update({
+      where: { id: respondentId },
+      data: { deletedAt: now },
+    }),
+    db.session.updateMany({
+      where: { respondentId, expiresAt: { gt: now } },
+      data: { expiresAt: epoch },
+    }),
+    db.invitation.updateMany({
+      where: { expiresAt: { gt: now }, assignment: { respondentId } },
+      data: { expiresAt: epoch, boundSessionId: null },
+    }),
+  ]);
+
+  await audit({
+    actorType: "respondent",
+    actorId: me.respondentId,
+    action: "respondent.removed",
+    targetType: "Respondent",
+    targetId: respondentId,
+    payload: { email: respondent.email },
+  });
+
+  return { ok: true };
+}
+
 export async function resendInvitationOp(
   assignmentId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {

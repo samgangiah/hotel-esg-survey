@@ -15,7 +15,13 @@ import { OperatorNav } from "@/components/operator/OperatorNav";
 import { db } from "@/lib/db";
 import { requireOperatorAdmin } from "@/lib/operator-admin-auth";
 import { ROLE_KEYS, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
-import { inviteRespondent, resendInvitationOp } from "./actions";
+import { EditTeamMember } from "@/components/operator/EditTeamMember";
+import {
+  inviteRespondent,
+  resendInvitationOp,
+  updateRespondentRoles,
+  removeRespondent,
+} from "./actions";
 
 export const metadata = { title: "Team" };
 export const dynamic = "force-dynamic";
@@ -118,6 +124,13 @@ export default async function TeamPage({
                 const distinctRoles = Array.from(
                   new Set(r.assignments.map((a) => a.role))
                 );
+                const distinctBuildingIds = Array.from(
+                  new Set(
+                    r.assignments
+                      .map((a) => a.buildingId)
+                      .filter((b): b is string => b !== null)
+                  )
+                );
                 return (
                   <div key={r.id} className="px-6 py-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -157,7 +170,18 @@ export default async function TeamPage({
                             .join(", ")}
                     </p>
                     {r.assignments.length > 0 && !r.isOperatorAdmin && (
-                      <ResendForm assignmentId={r.assignments[0].id} />
+                      <>
+                        <ResendForm assignmentId={r.assignments[0].id} />
+                        <EditTeamMember
+                          respondentId={r.id}
+                          respondentName={r.name}
+                          currentRoles={distinctRoles}
+                          currentBuildingIds={distinctBuildingIds}
+                          allBuildings={allBuildings}
+                          onUpdate={updateRespondentRoles}
+                          onRemove={removeRespondent}
+                        />
+                      </>
                     )}
                   </div>
                 );

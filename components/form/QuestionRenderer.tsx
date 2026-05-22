@@ -80,6 +80,13 @@ export function QuestionRenderer({
     !["repeater", "file", "table"].includes(question.type);
   const isDelegated = !!activeDelegation;
 
+  // "Answered by X" byline — the survey is shared across the team, so it's
+  // useful to see who last filled a question in. Top-level questions only.
+  const answeredBy =
+    !repeaterScope && hasAnswer(value)
+      ? backend.answeredBy[question.id]
+      : undefined;
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -104,6 +111,12 @@ export function QuestionRenderer({
           <div>
             {renderInput(question, value, (v) => setValue(question.id, v))}
           </div>
+          {answeredBy && (
+            <p className="text-xs text-muted">
+              Answered by{" "}
+              <span className="font-medium text-ink">{answeredBy.name}</span>
+            </p>
+          )}
           {canDelegate && backend.instanceId && (
             <DelegatePopover
               questionLabel={question.label}
@@ -120,6 +133,13 @@ export function QuestionRenderer({
       )}
     </div>
   );
+}
+
+/** Local copy of the "is this answer non-empty" check used elsewhere. */
+function hasAnswer(v: AnswerValue): boolean {
+  if (v === undefined || v === null || v === "") return false;
+  if (Array.isArray(v) && v.length === 0) return false;
+  return true;
 }
 
 function renderInput(

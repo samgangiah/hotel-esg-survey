@@ -5,7 +5,10 @@ import { formSpec } from "@/lib/form-data";
 import { computeScope, visibleSpec } from "@/lib/scope";
 import type { Answers, FormSpec } from "@/lib/schema";
 import { DbSurveyShell } from "@/components/form/db/DbSurveyShell";
-import type { DelegationView } from "@/components/form/state-context";
+import type {
+  DelegationView,
+  AnsweredBy,
+} from "@/components/form/state-context";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +23,15 @@ export default async function SurveyInstancePage({
   const { instanceId } = await params;
   const sp = await searchParams;
 
-  // Load the instance + template + this respondent's assignments + existing
-  // answers + existing section submissions, in one shot.
+  // Load the instance + template + this respondent's assignments + ALL
+  // answers (shared across the team) + this respondent's section
+  // submissions, in one shot.
+  //
+  // Answers are deliberately NOT filtered by respondent: an Answer row is
+  // unique per (instance, question, building), so the data is genuinely
+  // shared. Loading everyone's answers means a respondent sees what their
+  // colleagues have already filled in — no doubling-up, no silent
+  // overwrites, and the Operator Admin sees the whole picture live.
   const instance = await db.surveyInstance.findFirst({
     where: {
       id: instanceId,
@@ -32,7 +42,7 @@ export default async function SurveyInstancePage({
       site: { include: { operator: true, buildings: { where: { deletedAt: null } } } },
       assignments: { where: { respondentId: me.respondentId } },
       answers: {
-        where: { respondentId: me.respondentId },
+        include: { respondent: { select: { name: true } } },
       },
       sectionSubmissions: { where: { respondentId: me.respondentId } },
     },
@@ -62,13 +72,13 @@ export default async function SurveyInstancePage({
   });
   const scopedSpec = visibleSpec(lockedSpec, scope);
 
-  // Project answers from DB rows into a flat { questionId → value } map.
+  // Project answers from DB rows into a flat { questionId → value } map,
+  // plus a parallel { questionId → who answered it } map for the byline.
   const initialAnswers: Answers = {};
+  const initialAnsweredBy: AnsweredBy = {};
   for (const a of instance.answers) {
-    // Site/org-level answers are anchored to primary building; we expose them
-    // unconditionally. Building-level answers for the respondent's first
-    // scoped building also surface here. (Multi-building UI is Phase later.)
     initialAnswers[a.questionId] = a.valueJson as Answers[string];
+    initialAnsweredBy[a.questionId] = { name: a.respondent.name };
   }
 
   const initialSubmittedSections: Record<string, boolean> = {};
@@ -112,6 +122,7 @@ export default async function SurveyInstancePage({
       instanceId={instance.id}
       spec={scopedSpec}
       initialAnswers={initialAnswers}
+      initialAnsweredBy={initialAnsweredBy}
       initialSubmittedSections={initialSubmittedSections}
       initialDelegations={initialDelegations}
       respondentName={me.name}

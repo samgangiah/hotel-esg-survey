@@ -47,6 +47,7 @@ export function ZustandFormBackendProvider({
       instanceId: null,
       delegations: {},
       canDelegate: false,
+      answeredBy: {},
       setAnswer: setAnswerInStore,
       clearAnswer: clearAnswerInStore,
       markSectionSubmitted: markSectionSubmittedInStore,

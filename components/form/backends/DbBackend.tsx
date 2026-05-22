@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   FormBackendContext,
+  type AnsweredBy,
   type DelegationView,
   type FormBackend,
   type SaveState,
@@ -29,17 +30,25 @@ import { saveAnswer, submitSection } from "./db-actions";
 export function DbFormBackendProvider({
   instanceId,
   initialAnswers,
+  initialAnsweredBy,
   initialSubmittedSections,
   initialDelegations,
+  respondentName,
   children,
 }: {
   instanceId: string;
   initialAnswers: Answers;
+  initialAnsweredBy?: AnsweredBy;
   initialSubmittedSections: Record<string, boolean>;
   initialDelegations?: Record<string, DelegationView>;
+  /** Current respondent's name — used to re-byline questions they edit. */
+  respondentName?: string;
   children: React.ReactNode;
 }) {
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
+  const [answeredBy, setAnsweredBy] = useState<AnsweredBy>(
+    initialAnsweredBy ?? {}
+  );
   const [submittedSections, setSubmittedSections] = useState<
     Record<string, boolean>
   >(initialSubmittedSections);
@@ -94,14 +103,23 @@ export function DbFormBackendProvider({
   const setAnswerLocal = useCallback(
     (id: string, value: AnswerValue) => {
       setAnswers((prev) => ({ ...prev, [id]: value }));
+      // The current respondent now owns this answer — update the byline.
+      setAnsweredBy((prev) => ({
+        ...prev,
+        [id]: { name: respondentName ?? "You" },
+      }));
       scheduleFlush(id, value);
     },
-    [scheduleFlush]
+    [scheduleFlush, respondentName]
   );
 
   const clearAnswerLocal = useCallback(
     (id: string) => {
       setAnswers((prev) => {
+        const { [id]: _drop, ...rest } = prev;
+        return rest;
+      });
+      setAnsweredBy((prev) => {
         const { [id]: _drop, ...rest } = prev;
         return rest;
       });
@@ -133,6 +151,7 @@ export function DbFormBackendProvider({
       instanceId,
       delegations: initialDelegations ?? {},
       canDelegate: true,
+      answeredBy,
       setAnswer: setAnswerLocal,
       clearAnswer: clearAnswerLocal,
       markSectionSubmitted: markSectionSubmittedLocal,
@@ -143,6 +162,7 @@ export function DbFormBackendProvider({
       saveState,
       instanceId,
       initialDelegations,
+      answeredBy,
       setAnswerLocal,
       clearAnswerLocal,
       markSectionSubmittedLocal,

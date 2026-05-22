@@ -29,7 +29,9 @@ export default async function SurveyInstanceReviewPage({
       template: true,
       site: { include: { operator: true } },
       assignments: { where: { respondentId: me.respondentId } },
-      answers: { where: { respondentId: me.respondentId } },
+      // All answers — the survey is shared across the team (see the survey
+      // page for the rationale).
+      answers: true,
       sectionSubmissions: { where: { respondentId: me.respondentId } },
     },
   });
@@ -108,6 +110,7 @@ export default async function SurveyInstanceReviewPage({
         initialAnswers={initialAnswers}
         initialSubmittedSections={initialSubmittedSections}
         initialDelegations={{}}
+        respondentName={me.name}
       >
         <Review
           spec={scopedSpec}
