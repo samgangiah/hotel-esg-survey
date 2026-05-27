@@ -9,6 +9,7 @@ import {
 } from "@/lib/mailer";
 import {
   DELEGATION_TTL_MS,
+  buildQuestionDeepLink,
   findQuestionContext,
 } from "@/lib/delegation";
 import type { AnswerValue, FormSpec } from "@/lib/schema";
@@ -163,7 +164,12 @@ export async function submitDelegatedAnswer(args: {
         delegateEmail: respondent.email,
         questionLabel: ctx.question.label,
         siteName: instance.site.name,
-        surveyUrl: `${appUrl}/survey/${instance.id}`,
+        surveyUrl: buildQuestionDeepLink(
+          appUrl,
+          instance.id,
+          spec,
+          delegation.questionId
+        ),
       });
     }
 

@@ -52,19 +52,6 @@
           "title": null,
           "questions": [
             {
-              "id": "general_respondent_name",
-              "type": "text",
-              "label": "Your name",
-              "level": "site"
-            },
-            {
-              "id": "general_respondent_role",
-              "type": "text",
-              "label": "Your role at the property",
-              "help": "e.g. General Manager, Operations Director, Head of Maintenance",
-              "level": "site"
-            },
-            {
               "id": "general_property_name",
               "type": "text",
               "label": "Property name",

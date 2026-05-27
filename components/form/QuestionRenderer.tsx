@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type {
   AnswerValue,
@@ -53,6 +54,25 @@ export function QuestionRenderer({
   const backend = useFormBackend();
   const repeaterScope = useRepeaterScope();
 
+  // Deep-link target: when the URL ends in #q-<questionId>, scroll the
+  // question into view and flash a highlight ring for ~2s so the user
+  // (typically a delegator following "see their answer" from email) can
+  // spot it on a busy page. Top-level questions only — sub-questions
+  // don't get anchor ids.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (repeaterScope) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== `#q-${question.id}`) return;
+    const el = wrapperRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [question.id, repeaterScope]);
+
   if (!isQuestionVisible(question, scope)) return null;
 
   const value = getValue(question.id);
@@ -88,7 +108,16 @@ export function QuestionRenderer({
       : undefined;
 
   return (
-    <div className="space-y-2">
+    <div
+      ref={wrapperRef}
+      id={repeaterScope ? undefined : `q-${question.id}`}
+      className={
+        "space-y-2 rounded-md transition-shadow" +
+        (flash
+          ? " ring-2 ring-amber-400 ring-offset-2 ring-offset-canvas"
+          : "")
+      }
+    >
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <label className="font-medium text-ink">
           {typeof index === "number" && (
