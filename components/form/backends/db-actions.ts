@@ -3,11 +3,54 @@
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireRespondent } from "@/lib/respondent-auth";
+import { newToken } from "@/lib/auth/tokens";
 import {
   sendSectionSubmittedEmail,
   sendAllSectionsCompleteEmail,
 } from "@/lib/mailer";
 import type { AnswerValue, FormSpec } from "@/lib/schema";
+
+/** 14-day expiry, matches the rest of the app. */
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * Mint a fresh magic-link URL for the given respondent against the given
+ * SurveyInstance, with `nextPath` set so the click lands on a specific
+ * destination after identity confirmation. Returns a fully-qualified URL
+ * like `${APP_URL}/r/<token>`, or null if the respondent has no assignment
+ * on that instance (shouldn't happen for OAs but we guard anyway).
+ *
+ * Used by the section-submitted + all-sections-complete notification flow
+ * so that Operator Admins clicking from email don't get stuck inside
+ * another team-member's session on the same device.
+ */
+async function mintMagicLinkUrl(args: {
+  respondentId: string;
+  instanceId: string;
+  nextPath: string;
+}): Promise<string | null> {
+  const assignment = await db.assignment.findFirst({
+    where: {
+      respondentId: args.respondentId,
+      surveyInstanceId: args.instanceId,
+    },
+    select: { id: true },
+  });
+  if (!assignment) return null;
+
+  const { token, hash } = newToken();
+  await db.invitation.create({
+    data: {
+      assignmentId: assignment.id,
+      tokenHash: hash,
+      expiresAt: new Date(Date.now() + FOURTEEN_DAYS_MS),
+      nextPath: args.nextPath,
+    },
+  });
+
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  return `${appUrl}/r/${token}`;
+}
 
 /**
  * Verify the active respondent has an assignment to this instance, and resolve
@@ -217,15 +260,24 @@ async function notifyOnSectionSubmitted(args: {
     },
   });
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   for (const oa of operatorAdmins) {
+    // Mint a magic link that lands on /operator/progress after identity
+    // confirmation. Falls back to the bare path if the OA has no
+    // assignment on this instance (shouldn't happen, but defensive).
+    const progressUrl =
+      (await mintMagicLinkUrl({
+        respondentId: oa.id,
+        instanceId: instance.id,
+        nextPath: "/operator/progress",
+      })) ?? `${process.env.APP_URL ?? "http://localhost:3000"}/operator/progress`;
+
     await sendSectionSubmittedEmail({
       to: oa.email,
       toName: oa.name,
       submitterName: submitter.name,
       sectionTitle,
       siteName: instance.site.name,
-      progressUrl: `${appUrl}/operator/progress`,
+      progressUrl,
     });
   }
 
@@ -251,12 +303,20 @@ async function notifyOnSectionSubmitted(args: {
       targetId: instance.id,
     });
     for (const oa of operatorAdmins) {
+      const reviewUrl =
+        (await mintMagicLinkUrl({
+          respondentId: oa.id,
+          instanceId: instance.id,
+          nextPath: `/survey/${instance.id}/review`,
+        })) ??
+        `${process.env.APP_URL ?? "http://localhost:3000"}/survey/${instance.id}/review`;
+
       await sendAllSectionsCompleteEmail({
         to: oa.email,
         toName: oa.name,
         siteName: instance.site.name,
         operatorName: instance.site.operator.name,
-        reviewUrl: `${appUrl}/survey/${instance.id}/review`,
+        reviewUrl,
       });
     }
   }
