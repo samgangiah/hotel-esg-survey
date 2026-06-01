@@ -4,7 +4,6 @@ import { Lock } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireRespondent } from "@/lib/respondent-auth";
 import { formSpec } from "@/lib/form-data";
-import { computeScope, visibleSpec } from "@/lib/scope";
 import type { Answers, FormSpec } from "@/lib/schema";
 import { Review } from "@/components/form/Review";
 import { DbFormBackendProvider } from "@/components/form/backends/DbBackend";
@@ -42,14 +41,8 @@ export default async function SurveyInstanceReviewPage({
     (instance.template?.schemaJson as unknown as FormSpec | undefined) ??
     formSpec;
 
-  const scope = computeScope({
-    assignments: instance.assignments.map((a) => ({
-      role: a.role,
-      buildingId: a.buildingId,
-    })),
-    isOperatorAdmin: me.isOperatorAdmin,
-  });
-  const scopedSpec = visibleSpec(lockedSpec, scope);
+  // Review shows the full template — same shared-visibility model as the
+  // survey page. No role-based section/group filtering.
 
   const initialAnswers: Answers = {};
   for (const a of instance.answers) {
@@ -113,7 +106,7 @@ export default async function SurveyInstanceReviewPage({
         respondentName={me.name}
       >
         <Review
-          spec={scopedSpec}
+          spec={lockedSpec}
           basePath={`/survey/${instance.id}`}
           donePath="/done"
         />

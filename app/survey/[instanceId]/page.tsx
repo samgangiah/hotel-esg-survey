@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRespondent } from "@/lib/respondent-auth";
 import { formSpec } from "@/lib/form-data";
-import { computeScope, visibleSpec } from "@/lib/scope";
 import type { Answers, FormSpec } from "@/lib/schema";
 import { DbSurveyShell } from "@/components/form/db/DbSurveyShell";
 import type {
@@ -59,18 +58,12 @@ export default async function SurveyInstancePage({
     (instance.template?.schemaJson as unknown as FormSpec | undefined) ??
     formSpec;
 
-  // Compute respondent's scope + filter the template down to what they can see.
-  // `isOperatorAdmin` is the only thing that unlocks every section; the
-  // `sectionId === "all"` value on Assignment rows is just a sentinel we use
-  // until per-section assignments are first-class — it is NOT a permission.
-  const scope = computeScope({
-    assignments: instance.assignments.map((a) => ({
-      role: a.role,
-      buildingId: a.buildingId,
-    })),
-    isOperatorAdmin: me.isOperatorAdmin,
-  });
-  const scopedSpec = visibleSpec(lockedSpec, scope);
+  // Everyone on a survey instance sees the full template — no role-based
+  // section/group filtering. Role still drives section *submission*
+  // ownership (the team-progress grid + the "all sections complete" email),
+  // but visibility is shared so any team member can navigate anywhere,
+  // see what colleagues have answered, and avoid duplication. Per Penny
+  // (pilot tester): "easier if everyone can see everything."
 
   // Project answers from DB rows into a flat { questionId → value } map,
   // plus a parallel { questionId → who answered it } map for the byline.
@@ -120,7 +113,7 @@ export default async function SurveyInstancePage({
   return (
     <DbSurveyShell
       instanceId={instance.id}
-      spec={scopedSpec}
+      spec={lockedSpec}
       initialAnswers={initialAnswers}
       initialAnsweredBy={initialAnsweredBy}
       initialSubmittedSections={initialSubmittedSections}
