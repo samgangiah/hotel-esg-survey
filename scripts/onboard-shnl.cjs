@@ -230,7 +230,13 @@ async function main() {
 
   // Everything else in one transaction
   const { emailJobs } = await db.$transaction(async (tx) => {
-    const operator = await tx.operator.create({ data: { name: "SHNL" } });
+    // Script-provisioned operators skip the first-run setup wizard: the
+    // operator name, sites, and buildings are all set in this same tx, so
+    // there's nothing left for the wizard to capture. Leaving this NULL
+    // would make every OA see "Set up your operator" on first login.
+    const operator = await tx.operator.create({
+      data: { name: "SHNL", setupCompletedAt: new Date() },
+    });
     console.log(`Operator created: SHNL (${operator.id})`);
 
     const siteCtx = [];
