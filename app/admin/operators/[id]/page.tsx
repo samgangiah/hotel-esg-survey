@@ -214,6 +214,31 @@ export default async function OperatorDetailPage({
               {operator.respondents.map((r) => {
                 const lastSession = r.sessions[0];
                 const isDeleted = r.deletedAt !== null;
+
+                // Invitation state is intentionally per-Respondent here, not
+                // per-Assignment. The data model attaches an Invitation to
+                // one specific Assignment, but the *semantic* model is "one
+                // person, one magic link" — clicking the link logs them in
+                // as the Respondent, and their isOperatorAdmin (or other
+                // assignment scopes) cover everywhere they have access.
+                // Rendering invitation state once per Respondent avoids the
+                // "invite sent" / "no invite" mismatch that showed up for
+                // OAs assigned across multiple SurveyInstances.
+                const allInvites = r.assignments.flatMap((a) => a.invitations);
+                const primaryInvite =
+                  allInvites.length > 0
+                    ? allInvites.reduce((latest, cand) =>
+                        cand.sentAt > latest.sentAt ? cand : latest
+                      )
+                    : null;
+                // Use the assignment that currently carries the invitation,
+                // so Resend re-issues against the canonical row. Fall back to
+                // the first assignment when there's no invitation yet.
+                const resendAssignmentId =
+                  r.assignments.find((a) =>
+                    a.invitations.some((i) => i.id === primaryInvite?.id)
+                  )?.id ?? r.assignments[0]?.id;
+
                 return (
                   <div
                     key={r.id}
@@ -245,6 +270,29 @@ export default async function OperatorDetailPage({
                             </>
                           )}
                         </p>
+                        {r.assignments.length > 0 && !isDeleted && (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-muted">
+                            {primaryInvite ? (
+                              <span>
+                                invite{" "}
+                                {primaryInvite.openedAt
+                                  ? "opened"
+                                  : primaryInvite.expiresAt < new Date()
+                                    ? "expired"
+                                    : "sent"}{" "}
+                                {timeAgo(primaryInvite.sentAt)}
+                              </span>
+                            ) : (
+                              <span>no invite</span>
+                            )}
+                            {resendAssignmentId && (
+                              <ResendForm
+                                assignmentId={resendAssignmentId}
+                                operatorId={operator.id}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                       <RespondentControls
                         respondentId={r.id}
@@ -256,42 +304,21 @@ export default async function OperatorDetailPage({
 
                     {r.assignments.length > 0 && (
                       <ul className="mt-3 space-y-1.5">
-                        {r.assignments.map((a) => {
-                          const inv = a.invitations[0];
-                          return (
-                            <li
-                              key={a.id}
-                              className="flex flex-wrap items-baseline justify-between gap-3 rounded-control border border-line bg-canvas/40 px-3 py-2 text-xs"
-                            >
-                              <span>
-                                <span className="font-medium text-ink">
-                                  {a.surveyInstance.site.name}
-                                </span>{" "}
-                                · section{" "}
-                                <span className="font-mono">{a.sectionId}</span> ·
-                                role <span className="font-mono">{a.role}</span>
-                                {a.building ? ` · ${a.building.name}` : ""} ·{" "}
-                                <span className="text-muted">{a.status}</span>
-                              </span>
-                              <span className="flex items-center gap-2 text-muted">
-                                {inv ? (
-                                  <span>
-                                    invite{" "}
-                                    {inv.openedAt
-                                      ? "opened"
-                                      : inv.expiresAt < new Date()
-                                        ? "expired"
-                                        : "sent"}{" "}
-                                    {timeAgo(inv.sentAt)}
-                                  </span>
-                                ) : (
-                                  <span>no invite</span>
-                                )}
-                                <ResendForm assignmentId={a.id} operatorId={operator.id} />
-                              </span>
-                            </li>
-                          );
-                        })}
+                        {r.assignments.map((a) => (
+                          <li
+                            key={a.id}
+                            className="rounded-control border border-line bg-canvas/40 px-3 py-2 text-xs"
+                          >
+                            <span className="font-medium text-ink">
+                              {a.surveyInstance.site.name}
+                            </span>{" "}
+                            · section{" "}
+                            <span className="font-mono">{a.sectionId}</span> ·
+                            role <span className="font-mono">{a.role}</span>
+                            {a.building ? ` · ${a.building.name}` : ""} ·{" "}
+                            <span className="text-muted">{a.status}</span>
+                          </li>
+                        ))}
                       </ul>
                     )}
                   </div>

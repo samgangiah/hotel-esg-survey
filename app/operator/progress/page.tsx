@@ -57,11 +57,21 @@ export default async function ProgressPage() {
 
   // Operator-Admin sentinel assignments (one row per admin, sectionId="all",
   // buildingId=null) — these grant access across every building × every role.
-  const adminSentinels = operator.respondents.flatMap((r) =>
-    r.assignments
-      .filter((a) => a.sectionId === "all")
-      .map((a) => ({ ...a, respondent: r }))
-  );
+  //
+  // Dedupe by Respondent: an OA assigned to multiple SurveyInstances (e.g.
+  // SHNL's Rob Cook spans Harrogate + Newcastle) has *one* sentinel per
+  // instance, but they're the same person with the same single invitation.
+  // Picking the sentinel that carries the invitation (or, failing that,
+  // the first one) ensures each OA appears exactly once per grid cell with
+  // their real invite status — no duplicate "invite sent" + "no invite"
+  // pair side-by-side.
+  const adminSentinels = operator.respondents.flatMap((r) => {
+    const sentinels = r.assignments.filter((a) => a.sectionId === "all");
+    if (sentinels.length === 0) return [];
+    const carriesInvite = sentinels.find((a) => a.invitations.length > 0);
+    const chosen = carriesInvite ?? sentinels[0];
+    return [{ ...chosen, respondent: r }];
+  });
 
   return (
     <>
