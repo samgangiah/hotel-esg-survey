@@ -18,7 +18,6 @@
  *   docker exec phs-app node scripts/onboard-shnl.cjs
  */
 const { PrismaClient } = require("@prisma/client");
-const { Resend } = require("resend");
 const { randomBytes, createHash } = require("crypto");
 
 const APP_URL = process.env.APP_URL || "http://localhost:3000";
@@ -27,7 +26,6 @@ const RESEND_FROM =
   process.env.RESEND_FROM || "PHS Energy <noreply@phsenergy.co.uk>";
 
 const db = new PrismaClient();
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 function newToken() {
@@ -162,20 +160,33 @@ function invitationHtml(args) {
 }
 
 async function sendEmail(payload) {
-  if (!resend) {
+  if (!RESEND_API_KEY) {
     console.log(`  [no Resend key set — would have sent to ${payload.to}]`);
     return;
   }
   try {
-    const resp = await resend.emails.send({
-      from: RESEND_FROM,
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.text,
-      html: payload.html,
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      }),
     });
-    const id = resp?.data?.id || resp?.id || "(no id)";
-    console.log(`  sent -> ${payload.to}  resend-id=${id}`);
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error(
+        `  FAILED -> ${payload.to}: HTTP ${resp.status} ${JSON.stringify(body)}`
+      );
+      return;
+    }
+    console.log(`  sent -> ${payload.to}  resend-id=${body.id || "(no id)"}`);
   } catch (err) {
     console.error(`  FAILED -> ${payload.to}: ${err?.message || err}`);
   }
@@ -186,7 +197,7 @@ async function main() {
   if (!APP_URL.startsWith("https://")) {
     console.warn(`WARN: APP_URL is "${APP_URL}" — magic links will use this.`);
   }
-  if (!resend) {
+  if (!RESEND_API_KEY) {
     console.warn("WARN: RESEND_API_KEY not set — magic links will print but emails will NOT send.");
   }
 
