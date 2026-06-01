@@ -23,7 +23,23 @@ export default async function MagicLinkPage({
     include: {
       assignment: {
         include: {
-          respondent: true,
+          // Pull the respondent's operator + its full site list so OA
+          // confirmations can describe the actual cross-hotel scope
+          // (the assignment's own site.name only covers the one hotel
+          // this invitation happens to be attached to).
+          respondent: {
+            include: {
+              operator: {
+                include: {
+                  sites: {
+                    where: { deletedAt: null },
+                    orderBy: { createdAt: "asc" },
+                    select: { id: true, name: true },
+                  },
+                },
+              },
+            },
+          },
           surveyInstance: { include: { site: true } },
           building: true,
         },
@@ -51,6 +67,7 @@ export default async function MagicLinkPage({
   const a = invitation.assignment;
   const r = a.respondent;
   const site = a.surveyInstance.site;
+  const operator = r.operator;
 
   const isOperatorAdmin = r.isOperatorAdmin;
   // If this invitation was minted via /recover from a deep link, land the
@@ -83,15 +100,30 @@ export default async function MagicLinkPage({
           </h1>
         </div>
         <p className="text-ink">
-          You've been invited to take part in the energy survey for{" "}
-          <span className="font-medium">{site.name}</span>
-          {a.role !== "gm" && a.sectionId !== "all" ? (
+          {isOperatorAdmin ? (
             <>
-              {" "}— specifically the <span className="font-medium">{prettyRole(a.role)}</span> section
-              {a.building ? <> for <span className="font-medium">{a.building.name}</span></> : null}.
+              You've been invited as{" "}
+              <span className="font-medium">Operator Admin</span> for{" "}
+              <span className="font-medium">{operator.name}</span>
+              {" "}— full access to{" "}
+              <OperatorScopeSummary
+                sites={operator.sites.map((s) => s.name)}
+              />
+              .
             </>
           ) : (
-            <> as the Site Admin (full access).</>
+            <>
+              You've been invited to take part in the energy survey for{" "}
+              <span className="font-medium">{site.name}</span>
+              {a.role !== "gm" && a.sectionId !== "all" ? (
+                <>
+                  {" "}— specifically the <span className="font-medium">{prettyRole(a.role)}</span> section
+                  {a.building ? <> for <span className="font-medium">{a.building.name}</span></> : null}.
+                </>
+              ) : (
+                <> as the Site Admin (full access).</>
+              )}
+            </>
           )}
         </p>
         <p className="text-sm text-muted">
@@ -144,4 +176,38 @@ function prettyRole(role: string): string {
     energy_manager: "Energy / ESG Manager",
   };
   return map[role] ?? role;
+}
+
+/**
+ * Summarises an Operator Admin's cross-hotel scope on the magic-link
+ * confirmation page. Lists site names when there are few enough that
+ * naming them is more informative than a count; falls back to "all N
+ * hotels" once the list would dominate the message.
+ */
+function OperatorScopeSummary({ sites }: { sites: string[] }) {
+  if (sites.length === 0) {
+    // Shouldn't happen for a real OA, but keeps the sentence grammatical
+    // if someone marks isOperatorAdmin without any sites attached yet.
+    return <span className="font-medium">your hotels</span>;
+  }
+  if (sites.length === 1) {
+    return <span className="font-medium">{sites[0]}</span>;
+  }
+  if (sites.length <= 3) {
+    return (
+      <>
+        {sites.map((name, i) => (
+          <span key={name}>
+            {i > 0 ? (i === sites.length - 1 ? " and " : ", ") : null}
+            <span className="font-medium">{name}</span>
+          </span>
+        ))}
+      </>
+    );
+  }
+  return (
+    <>
+      all <span className="font-medium">{sites.length}</span> hotels
+    </>
+  );
 }
